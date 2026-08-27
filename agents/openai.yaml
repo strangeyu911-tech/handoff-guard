@@ -1,0 +1,4 @@
+interface:
+  display_name: "Handoff Guard"
+  short_description: "Model-aware handoffs and execution preflight"
+  default_prompt: "Create a structured handoff, route the next task to the cheapest sufficient model, and run preflight before execution."

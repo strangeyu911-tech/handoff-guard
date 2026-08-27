@@ -1,0 +1,30 @@
+{
+  "providers": {
+    "codex": {
+      "aliases": ["codex", "openai", "chatgpt", "work"],
+      "models": [
+        {"name": "codex-budget", "tier": "budget", "cost_class": "low", "capabilities": ["coding", "docs"]},
+        {"name": "codex-general", "tier": "general", "cost_class": "medium", "capabilities": ["coding", "docs", "tests"]},
+        {"name": "codex-strong", "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture", "bugfix"]},
+        {"name": "codex-vision", "tier": "vision", "cost_class": "high", "capabilities": ["vision"]}
+      ]
+    },
+    "workbuddy": {
+      "aliases": ["workbuddy", "work-buddy"],
+      "models": [
+        {"name": "Auto", "tier": "provider-auto", "cost_class": "low", "capabilities": ["coding", "docs"]},
+        {"name": "HY3", "tier": "general", "cost_class": "medium", "capabilities": ["coding"]},
+        {"name": "GLM-5.3", "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture"]},
+        {"name": "GLM-5.2", "tier": "general", "cost_class": "medium", "capabilities": ["coding"]},
+        {"name": "GLM-5.1", "tier": "budget", "cost_class": "low", "capabilities": ["coding", "docs"]},
+        {"name": "GLM-5V-Turbo", "tier": "vision", "cost_class": "high", "capabilities": ["vision"]},
+        {"name": "MiniMax-M3", "tier": "general", "cost_class": "medium", "capabilities": ["coding", "docs"]},
+        {"name": "Kimi-K3", "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture"]},
+        {"name": "Kimi-K2.7-Code", "tier": "general", "cost_class": "medium", "capabilities": ["coding", "tests"]},
+        {"name": "Kimi-K2.6", "tier": "budget", "cost_class": "low", "capabilities": ["coding", "docs"]},
+        {"name": "Deepseek-V4-Flash", "tier": "budget", "cost_class": "low", "capabilities": ["coding", "docs"]},
+        {"name": "Deepseek-V4-Pro", "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture", "bugfix"]}
+      ]
+    }
+  }
+}
