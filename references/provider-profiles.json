@@ -4,8 +4,8 @@
       "aliases": ["codex", "openai", "chatgpt", "work"],
       "models": [
         {"name": "codex-budget", "tier": "budget", "cost_class": "low", "capabilities": ["coding", "docs"]},
-        {"name": "codex-general", "tier": "general", "cost_class": "medium", "capabilities": ["coding", "docs", "tests"]},
-        {"name": "codex-strong", "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture", "bugfix"]},
+        {"name": "Luna", "aliases": ["codex-general"], "tier": "general", "cost_class": "medium", "capabilities": ["coding", "docs", "tests"]},
+        {"name": "Sol", "aliases": ["codex-strong"], "tier": "strong", "cost_class": "high", "capabilities": ["coding", "architecture", "bugfix"]},
         {"name": "codex-vision", "tier": "vision", "cost_class": "high", "capabilities": ["vision"]}
       ]
     },

@@ -91,6 +91,81 @@ class SelectModelTests(unittest.TestCase):
         result = select_model.select({"task_complexity": "simple", "provider_availability": ["workbuddy"]}, profiles)
         self.assertEqual(result["recommended_model"], "NewBudget")
 
+    def test_case_a_first_core_model_uses_sol_medium(self):
+        result = select_model.select({
+            "task_complexity": "complex",
+            "task_type": "architecture",
+            "operation_mode": "architecture",
+            "decision_novelty": "high",
+            "ambiguity": "high",
+            "blast_radius": "high",
+            "cross_system_contract": True,
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["recommended_model"], "Sol")
+        self.assertEqual(result["recommended_reasoning_effort"], "medium")
+
+    def test_case_b_large_read_only_audit_uses_luna_medium(self):
+        result = select_model.select({
+            "task_complexity": "complex",
+            "task_type": "research",
+            "operation_mode": "read_only_audit",
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["recommended_model"], "Luna")
+        self.assertEqual(result["recommended_model_tier"], "general")
+        self.assertEqual(result["recommended_reasoning_effort"], "medium")
+
+    def test_complexity_alone_does_not_escalate(self):
+        result = select_model.select({"task_complexity": "complex", "task_type": "other", "provider_availability": ["codex"]})
+        self.assertEqual(result["recommended_model"], "Luna")
+        self.assertEqual(result["recommended_model_tier"], "general")
+
+    def test_low_risk_small_bug_uses_luna(self):
+        result = select_model.select({
+            "task_complexity": "moderate",
+            "task_type": "bugfix",
+            "operation_mode": "bugfix",
+            "ambiguity": "low",
+            "blast_radius": "low",
+            "irreversibility": "low",
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["recommended_model"], "Luna")
+
+    def test_destructive_migration_uses_sol(self):
+        result = select_model.select({
+            "task_complexity": "moderate",
+            "operation_mode": "migration",
+            "irreversibility": "high",
+            "data_integrity_risk": True,
+            "destructive": True,
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["recommended_model"], "Sol")
+
+    def test_two_prior_failures_escalate_bugfix(self):
+        result = select_model.select({
+            "task_complexity": "complex",
+            "operation_mode": "bugfix",
+            "prior_failed_attempts": 2,
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["recommended_model"], "Sol")
+
+    def test_legacy_codex_model_name_remains_recognized(self):
+        result = select_model.select({
+            "task_complexity": "moderate",
+            "current_model": {"provider": "codex", "model": "codex-general"},
+            "current_reasoning_effort": "medium",
+            "provider_availability": ["codex"],
+        })
+        self.assertEqual(result["status"], "PASS")
+
+    def test_invalid_routing_dimension_fails_explicitly(self):
+        with self.assertRaises(ValueError):
+            select_model.select({"task_complexity": "moderate", "operation_mode": "unknown", "provider_availability": ["codex"]})
+
 
 if __name__ == "__main__":
     unittest.main()

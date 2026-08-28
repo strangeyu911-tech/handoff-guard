@@ -23,7 +23,7 @@ An explicit user request for a handoff (for example, â€œgive me a Work handoffâ€
 ## Core workflow
 
 1. After the emission gate allows a handoff, produce the fields in [handoff-spec.md](../../references/handoff-spec.md), using [handoff-template.md](../../assets/handoff-template.md) when useful.
-2. Recommend the next stage's provider/model with `../../scripts/select_model.py`. Read [routing-policy.md](../../references/routing-policy.md) for the input shape and decision rules.
+2. Recommend the next stage's provider/model with `../../scripts/select_model.py`. Read [routing-policy.md](../../references/routing-policy.md) for the input shape and decision rules. Classify operation mode and independent decision risk separately: workload size, file count, repository count, or prompt length alone must not escalate to Sol. Read-only research and settled implementation default to Luna; first-time core architecture, high-risk contracts, destructive migrations, data-integrity risk, or two evidenced prior failures can justify Sol.
 3. Run the receiving agent's preflight before implementation. Known and suitable is `PASS`; a material model mismatch is `BLOCK`; unavailable model/reasoning metadata is `UNVERIFIED` and execution may continue. If the selector says the current model is clearly overpowered or underpowered, stop and ask the user to switch models. A small Medium/High reasoning mismatch is advisory, not a blocker.
 4. Once preflight passes, execute only the stated next objective. Do not re-open locked architecture decisions, brainstorm alternatives, expand scope, or perform a broad refactor unless the handoff explicitly changes.
 5. Validate a handoff with `../../scripts/validate_handoff.py`; fix every reported required-field error before passing it onward.
@@ -40,3 +40,5 @@ An explicit user request for a handoff (for example, â€œgive me a Work handoffâ€
 This skill coordinates handoffs and preflight only. It recommends a manual model/provider choice; it does not control a host's model picker, automatically switch models/providers, migrate a session, or dispatch a request to another model. It is not an LLM gateway, API proxy, benchmark system, billing system, MCP server, or general agent orchestration framework.
 
 Unknown is advisory, not blocking. If the host cannot reliably expose the active model, Handoff Guard treats the configuration as unverified rather than mismatched, shows the recommendation, and allows execution to continue.
+
+The selector and repository tests verify routing policy only. They cannot prove that ChatGPT Chat mode discovers or triggers this Skill, or that Skill-only and Custom-Instructions-only configurations behave identically; those require manual product-environment testing.

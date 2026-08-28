@@ -18,6 +18,8 @@
 
 ## 与 model router 和普通交接技能的区别
 
+交接守卫不是运行时 LLM Gateway，也不是自动 model router。
+
 model router 属于自动路由或自动选择模型的另一类工具，工作在模型调用层，可以直接把请求分发到不同模型或模型提供方。
 
 普通交接技能主要负责交接哪些内容。交接守卫除了保存交接信息，还会为下一阶段推荐模型提供方和模型，并在工作代理真正执行前检查当前配置是否适合开始执行。
@@ -30,13 +32,13 @@ model router 属于自动路由或自动选择模型的另一类工具，工作�
 
 它不能控制 ChatGPT 的模型选择器，不能自动切换模型或模型提供方，也不会自动迁移当前会话或把请求分发到另一个模型。需要切换时，它会告诉用户应该手动选择什么。
 
-如果宿主环境无法可靠读取当前模型或推理强度，交接守卫会返回 `UNVERIFIED`，而不是把配置当成不匹配。它会明确说明无法验证，展示推荐配置，但不会因此阻止执行。
+如果宿主环境无法可靠读取当前模型或推理强度，交接守卫会返回 `UNVERIFIED`（未验证），而不是把配置当成不匹配。它会明确说明无法验证，展示推荐配置，但不会因此阻止执行。
 
 ## 交接生成边界
 
 只有在能够可靠确认当前是普通聊天 / 讨论场景，并且已经形成明确开发边界时，交接守卫才会自动生成交接。这里的开发边界包括：已经确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / 检查点结论。
 
-只要当前线程访问或修改过项目文件、运行过终端命令、修改过代码、执行过测试、进行过 Git 操作，或出现其他明显的代码实施行为，就视为工作 / 实施环境。此时交接守卫不会递归生成或附带新的工作交接，即使任务已完成、已有检查点或提交，或者已经形成下一阶段计划。如果无法可靠判断当前模式，默认不自动生成。如果用户明确要求“给我一个工作交接”或“生成交接”，则可以覆盖这一自动限制。
+只要当前线程访问或修改过项目文件、运行过终端命令、修改过代码、执行过测试、进行过 Git 操作，或出现其他明显的代码实施行为，就视为工作 / 实施环境（Work / implementation 环境）。此时交接守卫不会递归生成或附带新的工作交接，即使任务已完成、已有检查点或提交，或者已经形成下一阶段计划。如果无法可靠判断当前模式，默认不自动生成。如果用户明确要求“给我一个工作交接”或“生成交接”，则可以覆盖这一自动限制。
 
 ## 核心工作流程
 
@@ -103,7 +105,11 @@ $CODEX_HOME/skills/handoff-guard/
 python scripts/select_model.py --input '{"task_complexity":"moderate","task_type":"implementation","architecture_settled":true,"provider_availability":["codex","workbuddy"]}'
 ```
 
-一般规则是：简单文档或机械修改使用 `budget`，已确定方案的普通实施使用 `general`，复杂架构和疑难错误使用 `strong`。选择器只输出推荐，不会调用或切换宿主中的模型。
+选择器会把工作量复杂度和推理 / 决策风险分开判断。文件数量、代码量、仓库数量、阅读量或提示词长度本身，绝不能单独把任务升级到 Sol / strong。
+
+只读审计、研究、能力盘点、复用审计、文档、测试，以及在已确定架构上的大量实现，默认使用 Luna / general。只有首次定义核心架构或数据模型、高歧义、高影响范围、高不可逆性、数据完整性风险、破坏性操作、新的跨系统契约，或 Luna 已有两次明确失败等独立高风险信号，才升级到 Sol / strong。当前策略下，Luna 和 Sol 默认都使用 Medium 推理强度。
+
+选择器支持可选的路由维度，包括 `operation_mode`、`decision_novelty`、`ambiguity`、`blast_radius`、`irreversibility`、`cross_system_contract`、`data_integrity_risk`、`destructive` 和 `prior_failed_attempts`。选择器只输出推荐，不会调用或切换宿主中的模型。
 
 ### 执行前检查
 
@@ -118,6 +124,13 @@ python scripts/select_model.py --input '{"task_complexity":"moderate","task_type
 ### 无法确认模型时的行为
 
 无法确认只提供提示，不会阻止执行：无法检测当前模型不等于模型不匹配。交接守卫会显示推荐模型和推理强度，提示用户按需手动核对，但不会仅因无法确认而拒绝执行。
+
+回归示例：
+
+- 首次定义 Conversation Pair / Relationship 核心数据模型，并处理上下文边界、缓存兼容和 Runtime 行为 → `Sol`、Medium。
+- 只读审计 OpenSelf、Talky、Crush.skill、ex-skill、Chat-Style-Bot 和 WeChat-AI → `Luna`、Medium，即使涉及多个仓库。
+
+这些只是路由策略检查，不能证明宿主一定提供对应模型，也不能证明真实产品对话中一定触发 Skill。
 
 ## 模型提供方回退 / WorkBuddy 示例
 
@@ -156,6 +169,35 @@ python scripts/validate_handoff.py path/to/handoff.md
 ```
 
 缺少必要字段时会返回错误并使用非零退出码。
+
+## 真实 ChatGPT Chat 环境人工 A/B 验收
+
+仓库内 selector 测试不能验证 ChatGPT Chat 模式是否发现并触发该 Skill，也不能验证 Skill 与 Custom Instructions 冲突时的行为。仓库测试通过后，需要在真实产品环境中人工验收。
+
+### A. Skill-only
+
+1. 备份当前 Handoff 自定义指令。
+2. 暂时移除或禁用这些自定义指令。
+3. 安装 GitHub 发布的 Handoff Guard Skill。
+4. 新建普通 Chat 对话。
+5. 依次测试固定任务：README 修改；小型 UI bug；复杂但只读的 GitHub reuse audit；已定架构下的大量实现；首次定义 Relationship Skill 架构；destructive database migration；以及 Luna 已两次明确失败后的复杂 bug。
+6. 记录 Skill 是否触发、推荐模型、推荐推理强度、handoff 是否正确，以及是否出现不必要的 `BLOCK` / `UNVERIFIED`。
+
+### B. Custom-Instructions-only
+
+禁用或卸载 Skill，恢复原 Handoff 自定义指令，在新对话中重复相同或语义等价的任务，并记录相同指标。
+
+### C. 对比
+
+对比触发稳定性、模型推荐准确率、是否经常过度升级 Sol、错误阻断、handoff 格式一致性，以及 token / 指令长度负担。不要在没有人工测试数据前声称 Skill 一定优于 Custom Instructions。
+
+如果已经安装 Skill，可选用以下最小自定义指令：
+
+```text
+开发任务形成 handoff 时，优先使用已安装的 Handoff Guard Skill 生成并验证 handoff 与模型推荐。
+```
+
+这只是触发建议；核心路由策略应保留在 Skill 内，避免两套完整规则发生漂移。
 
 ## 项目结构
 

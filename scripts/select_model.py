@@ -12,9 +12,32 @@ from typing import Any
 
 TIERS = ("budget", "general", "strong")
 TIER_RANK = {name: index for index, name in enumerate(TIERS)}
-EFFORT_FOR_TIER = {"budget": "low", "general": "medium", "strong": "high", "vision": "high"}
+EFFORT_FOR_TIER = {"budget": "low", "general": "medium", "strong": "medium", "vision": "high"}
 KNOWN_REASONING_EFFORTS = {"low", "medium", "high"}
 DEFAULT_PROFILE = Path(__file__).resolve().parents[1] / "references" / "provider-profiles.json"
+OPERATION_MODES = {
+    "read_only_audit",
+    "research",
+    "inventory",
+    "reuse_audit",
+    "capability_review",
+    "documentation",
+    "tests",
+    "implementation",
+    "architecture",
+    "bugfix",
+    "migration",
+}
+RISK_LEVELS = {"low", "medium", "high"}
+LUNA_FIRST_MODES = {
+    "read_only_audit",
+    "research",
+    "inventory",
+    "reuse_audit",
+    "capability_review",
+    "documentation",
+    "tests",
+}
 
 
 def load_profiles(path: str | Path = DEFAULT_PROFILE) -> dict[str, Any]:
@@ -53,20 +76,79 @@ def available_providers(profiles: dict[str, Any], availability: Any) -> list[str
     return result
 
 
+def _validated_level(task: dict[str, Any], field: str) -> str | None:
+    value = task.get(field)
+    if value is None:
+        return None
+    value = str(value).lower()
+    if value not in RISK_LEVELS:
+        raise ValueError(f"{field} must be low, medium, or high")
+    return value
+
+
+def _risk_signals(task: dict[str, Any], operation_mode: str | None) -> list[str]:
+    signals = []
+    for field in ("decision_novelty", "ambiguity", "blast_radius", "irreversibility"):
+        if _validated_level(task, field) == "high":
+            signals.append(field)
+    if task.get("cross_system_contract") is True:
+        signals.append("cross_system_contract")
+    if task.get("data_integrity_risk") is True:
+        signals.append("data_integrity_risk")
+    if task.get("destructive") is True:
+        signals.append("destructive")
+    failures = task.get("prior_failed_attempts", 0)
+    if not isinstance(failures, int) or isinstance(failures, bool) or failures < 0:
+        raise ValueError("prior_failed_attempts must be a non-negative integer")
+    if failures >= 2:
+        signals.append("prior_failed_attempts")
+    if operation_mode == "migration" and _validated_level(task, "irreversibility") == "high":
+        if "irreversibility" not in signals:
+            signals.append("irreversibility")
+    return signals
+
+
+def _explicitly_low_risk(task: dict[str, Any]) -> bool:
+    levels = [_validated_level(task, field) for field in ("ambiguity", "blast_radius", "irreversibility")]
+    return all(level == "low" for level in levels)
+
+
 def task_tier(task: dict[str, Any]) -> tuple[str, str]:
     complexity = str(task.get("task_complexity", "moderate")).lower()
     task_type = str(task.get("task_type", "other")).lower()
     if complexity not in {"simple", "moderate", "complex"}:
         raise ValueError("task_complexity must be simple, moderate, or complex")
+    operation_mode = task.get("operation_mode")
+    if operation_mode is not None:
+        operation_mode = str(operation_mode).lower()
+        if operation_mode not in OPERATION_MODES:
+            raise ValueError(f"operation_mode must be one of: {', '.join(sorted(OPERATION_MODES))}")
+    risk_signals = _risk_signals(task, operation_mode)
     if task_type == "vision":
         return "vision", "Vision work requests a vision-capable tier."
+    if risk_signals:
+        return "strong", f"Independent high-risk signals require the strong tier: {', '.join(risk_signals)}."
+    if operation_mode in LUNA_FIRST_MODES:
+        return "general", "Read-only, research, documentation, and test work default to the Luna/general tier; workload size alone does not escalate it."
+    if operation_mode == "implementation" and task.get("architecture_settled") is True:
+        return "general", "Implementation against a settled architecture defaults to the Luna/general tier."
+    if operation_mode == "bugfix" and _explicitly_low_risk(task):
+        return "general", "A bounded, low-risk bugfix fits the Luna/general tier."
+    if operation_mode == "migration":
+        return "general", "A reversible migration without independent risk signals fits the Luna/general tier."
+    if operation_mode == "architecture":
+        return "strong", "Architecture work without explicit low-risk, settled-design evidence uses the Sol/strong tier."
+    if task_type == "architecture" and task.get("architecture_settled") is not True:
+        return "strong", "Unsettled architecture work uses the Sol/strong tier."
+    if task_type == "bugfix" and not _explicitly_low_risk(task):
+        return "strong", "A bugfix without bounded low-risk evidence uses the Sol/strong tier."
+    if task.get("architecture_settled") is False:
+        return "strong", "Unsettled architecture uses the Sol/strong tier."
     if complexity == "simple":
         return "budget", "Simple or mechanical work only needs the budget tier."
-    if complexity == "complex" or task_type in {"architecture", "bugfix"} or task.get("architecture_settled") is False:
-        return "strong", "Architecture work or a difficult cross-module bug needs the strong tier."
     if task.get("cost_sensitivity") == "high":
         return "budget", "Cost sensitivity permits the budget tier for moderate work."
-    return "general", "Settled, moderate implementation work fits the general tier."
+    return "general", "Task complexity alone does not escalate the model; the Luna/general tier is sufficient without independent risk signals."
 
 
 def select_model_for_provider(profile: dict[str, Any], desired_tier: str, task_type: str) -> tuple[dict[str, Any], str | None]:
@@ -102,7 +184,7 @@ def model_tier(profiles: dict[str, Any], current: Any) -> tuple[str | None, str 
     model_name = current.get("model")
     for provider_name, profile in profiles["providers"].items():
         for model in profile.get("models", []):
-            if model.get("name") == model_name:
+            if model.get("name") == model_name or model_name in model.get("aliases", []):
                 return model.get("tier"), provider or provider_name
     return None, provider
 

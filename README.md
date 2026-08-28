@@ -20,7 +20,7 @@ Handoff Guard combines three bounded capabilities:
 
 ## What Handoff Guard is not
 
-Handoff Guard is not a runtime LLM gateway or an automatic model router. A model router belongs to a different category of tools: it automatically routes requests to different models or providers at the invocation layer.
+Handoff Guard is not a runtime LLM gateway or automatic model router. A model router belongs to a different category of tools: it automatically routes requests to different models or providers at the invocation layer.
 
 Handoff Guard does not control ChatGPT's model picker, automatically switch models or providers, migrate the current session, or guarantee that the host exposes the exact underlying model identity. It gives the user a recommendation for a manual switch when one is needed.
 
@@ -99,11 +99,22 @@ python scripts/select_model.py --input '{"task_complexity":"moderate","task_type
 
 ### Model recommendation
 
-The selector recommends the cheapest configured tier that is sufficient for the task: budget for simple work, general for settled implementation, and strong for complex architecture or difficult bugs. The output is a recommendation for the host; it does not invoke or switch the selected model.
+The selector separates workload complexity from reasoning and decision risk. File count, code volume, repository count, reading volume, or prompt length alone MUST NOT escalate a task to Sol/strong.
+
+Luna/general is the default for read-only audits, research, capability inventories, reuse audits, documentation, tests, and large implementation work against a settled architecture. Sol/strong is reserved for independent high-risk signals such as first-time core architecture or data models, high ambiguity, high blast radius, high irreversibility, data-integrity risk, destructive operations, a new cross-system contract, or two evidenced prior failures. Both Luna and Sol use Medium reasoning by default in the current policy.
+
+The selector accepts optional routing dimensions such as `operation_mode`, `decision_novelty`, `ambiguity`, `blast_radius`, `irreversibility`, `cross_system_contract`, `data_integrity_risk`, `destructive`, and `prior_failed_attempts`. The output is a recommendation for the host; it does not invoke or switch the selected model.
 
 For preflight, include `current_model` and `current_reasoning_effort` when the host exposes them. The result contains an explicit `status`: `PASS`, `BLOCK`, or `UNVERIFIED`, plus `block_current_execution`. Only a material mismatch or declared quota constraint blocks execution.
 
-If the host cannot reliably expose the active model or reasoning effort, Handoff Guard returns `UNVERIFIED`, shows the recommendation, and allows execution to continue. Unknown metadata is advisory, not blocking; the user can verify the model picker manually if needed.
+If the host cannot reliably expose the active model or reasoning effort, Handoff Guard returns `UNVERIFIED`, shows the recommendation, and allows execution to continue. Unknown is advisory, not blocking; the user can verify the model picker manually if needed.
+
+Regression examples:
+
+- First-time Conversation Pair / Relationship core data model, including context boundaries, cache compatibility, and Runtime behavior → `Sol`, Medium.
+- Read-only audit of OpenSelf, Talky, Crush.skill, ex-skill, Chat-Style-Bot, and WeChat-AI → `Luna`, Medium, even though it spans many repositories.
+
+These are routing-policy checks, not proof that a model is available or that the Skill triggers in a product conversation.
 
 For validation:
 
@@ -112,6 +123,35 @@ python scripts/validate_handoff.py path/to/handoff.md
 ```
 
 The validator returns JSON and a non-zero exit status when a required field is missing.
+
+## Real ChatGPT Chat A/B acceptance
+
+Repository selector tests cannot verify whether ChatGPT Chat mode discovers this Skill, triggers it in a real conversation, or resolves conflicts between a Skill and Custom Instructions. Perform that acceptance manually after the repository tests pass.
+
+### A. Skill-only
+
+1. Back up the current Handoff Guard Custom Instructions.
+2. Temporarily remove or disable those instructions.
+3. Install the GitHub-published Handoff Guard Skill.
+4. Start a new ordinary Chat conversation.
+5. Run the same fixed tasks: README modification; small UI bug; complex read-only GitHub reuse audit; large implementation against settled architecture; first-time Relationship Skill architecture; destructive database migration; and a complex bug after two explicit Luna failures.
+6. Record whether the Skill triggered, the recommended model and reasoning effort, whether the handoff was correct, and whether it produced unnecessary `BLOCK` or `UNVERIFIED` results.
+
+### B. Custom-Instructions-only
+
+Disable or uninstall the Skill for the test, restore the original Handoff Custom Instructions, and repeat the same or semantically equivalent tasks in new conversations. Record the same indicators.
+
+### C. Compare
+
+Compare trigger stability, model recommendation accuracy, unnecessary Sol escalation, false blocks, handoff-format consistency, and token/instruction-length overhead. Do not assume the Skill is better than Custom Instructions before collecting results.
+
+When the Skill is installed, an optional minimal Custom Instruction is:
+
+```text
+When a development task forms a handoff, prefer the installed Handoff Guard Skill to generate and validate the handoff and model recommendation.
+```
+
+This is a trigger suggestion only; the routing policy should remain in the Skill so two full rule sets do not drift.
 
 ## Provider fallback
 

@@ -10,6 +10,15 @@ Handoff Guard uses an explainable heuristic rather than online pricing, benchmar
 {
   "task_complexity": "simple | moderate | complex",
   "task_type": "docs | implementation | architecture | bugfix | tests | other",
+  "operation_mode": "read_only_audit | research | inventory | reuse_audit | capability_review | documentation | tests | implementation | architecture | bugfix | migration",
+  "decision_novelty": "low | medium | high",
+  "ambiguity": "low | medium | high",
+  "blast_radius": "low | medium | high",
+  "irreversibility": "low | medium | high",
+  "cross_system_contract": false,
+  "data_integrity_risk": false,
+  "destructive": false,
+  "prior_failed_attempts": 0,
   "architecture_settled": true,
   "provider_availability": ["codex", "workbuddy"],
   "preferred_provider": "workbuddy",
@@ -21,16 +30,20 @@ Handoff Guard uses an explainable heuristic rather than online pricing, benchmar
 }
 ```
 
-Only `task_complexity` is required. Missing availability means every provider in the profile is considered available. `current_model` is optional; without it, routing is returned with `UNVERIFIED` status and execution remains allowed.
+Only `task_complexity` is required for backwards-compatible routing. The risk fields are optional, but should be supplied when the task is a bugfix, migration, architecture decision, or cross-system change. Missing availability means every provider in the profile is considered available. `current_model` is optional; without it, routing is returned with `UNVERIFIED` status and execution remains allowed.
 
 ## Tier heuristic
 
-- Simple documentation, tests, or mechanical edits: `budget`, low effort.
-- Moderate implementation or a settled architecture: `general`, medium effort.
-- Unsettled architecture, cross-module bugs, or complex work: `strong`, high effort.
+- `Luna` is the default general tier for read-only audits, research, inventory, reuse audits, documentation, tests, and implementation against a settled architecture—even when the workload is large.
+- `Sol` is reserved for independent high-risk signals: high decision novelty, ambiguity, blast radius, irreversibility, data-integrity risk, destructive operations, a new cross-system contract, or at least two prior failed attempts.
+- An unsettled architecture and an unbounded bugfix remain strong-tier defaults for backwards compatibility. A bugfix explicitly bounded as low ambiguity, low blast radius, and low irreversibility is Luna-tier.
+- A reversible migration without independent risk signals is Luna-tier; a destructive or high-irreversibility migration is Sol-tier.
+- `task_complexity` describes workload size only. Complexity alone MUST NOT escalate a task to Sol/strong. A simple mechanical task may still use `budget` when no operation mode calls for Luna.
 - A vision task requests `vision` when that tier exists; otherwise the selector falls back to `general` and explains it.
 
-Cost sensitivity can move a moderate task to `budget` when the provider has one. It does not downgrade a complex architecture or difficult bugfix task.
+Cost sensitivity can move an otherwise low-risk task to `budget` when the provider has one. It does not downgrade a task with independent high-risk signals.
+
+Model and reasoning recommendations are separate. The default regression policy recommends Medium reasoning for both Luna and Sol; a vision fallback keeps High effort.
 
 ## Provider selection
 
