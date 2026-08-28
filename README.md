@@ -56,6 +56,14 @@ $CODEX_HOME/skills/handoff-guard/
 
 If `CODEX_HOME` is not set, use the standard user skills directory for your agent (commonly `~/.codex/skills/`). The folder must contain `SKILL.md` at its root. The skill is discoverable automatically; the UI metadata is in `agents/openai.yaml`.
 
+### Plugin installation
+
+This repository also contains a skills-only Plugin manifest. The canonical Plugin Skill is at `skills/handoff-guard/SKILL.md`; the root `SKILL.md` remains available for direct GitHub Skill installation. The Plugin intentionally has no MCP server or app manifest.
+
+The “Install from ChatGPT Plugin Directory” option can be documented here after Handoff Guard is reviewed and listed by OpenAI. It is not published in that directory yet.
+
+Branding TODO before directory submission: add a reviewed logo/icon asset with the appropriate usage rights, then add its paths to `.codex-plugin/plugin.json`. No logo or icon is claimed by the current manifest.
+
 ## Usage
 
 When ending an architecture or implementation conversation, ask the agent to create a Handoff Guard handoff. Use the template in `assets/handoff-template.md` and include a real commit/file checkpoint or explicitly write `none`.
@@ -101,7 +109,11 @@ The default WorkBuddy catalog in `references/provider-profiles.json` includes Au
 
 ```text
 handoff-guard/
+├── .codex-plugin/plugin.json
 ├── SKILL.md
+├── skills/handoff-guard/
+│   ├── SKILL.md
+│   └── agents/openai.yaml
 ├── README.md
 ├── LICENSE
 ├── references/
@@ -115,9 +127,14 @@ handoff-guard/
 │   └── validate_handoff.py
 ├── evals/evals.json
 └── tests/
+    ├── test_plugin_structure.py
     ├── test_select_model.py
     └── test_validate_handoff.py
 ```
+
+## Plugin submission tests
+
+`evals/plugin-submission-tests.json` contains five positive and three negative fixtures for Plugin review. They cover handoff creation, known-model preflight, material mismatches, provider fallback, non-triggering ordinary requests, and the rule that unavailable model/reasoning metadata returns `UNVERIFIED` without blocking execution.
 
 ## Limitations
 

@@ -1,0 +1,35 @@
+{
+  "name": "handoff-guard",
+  "version": "0.1.0",
+  "description": "Model-aware handoffs, deterministic model recommendations, and execution preflight for coding agents.",
+  "author": {
+    "name": "Handoff Guard contributors",
+    "url": "https://github.com/strangeyu911-tech/handoff-guard"
+  },
+  "repository": "https://github.com/strangeyu911-tech/handoff-guard",
+  "license": "MIT",
+  "keywords": [
+    "handoff",
+    "coding agents",
+    "model selection",
+    "preflight",
+    "developer workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Handoff Guard",
+    "shortDescription": "Model-aware handoffs and execution preflight",
+    "longDescription": "Preserve settled implementation decisions, recommend the cheapest sufficient provider/model tier, and run a preflight before a receiving agent changes files. Handoff Guard is advisory when the host cannot expose current model metadata and never switches models or providers automatically.",
+    "developerName": "Handoff Guard contributors",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Create a structured handoff for the next coding agent.",
+      "Recommend a model and run preflight before implementation.",
+      "Validate this handoff without changing the settled architecture."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "description": "Manual and automated submission fixtures for the Handoff Guard skills-only plugin.",
+  "positive": [
+    {
+      "id": "positive-structured-handoff",
+      "prompt": "The architecture decision is settled. Create a structured handoff for the receiving coding agent with the current state, completed work, checkpoint, next objective, locked boundaries, and do-not guardrails.",
+      "expected": "Invoke Handoff Guard and produce all required handoff fields without reopening the architecture decision."
+    },
+    {
+      "id": "positive-known-suitable-preflight",
+      "prompt": "The next task is a moderate implementation with a settled architecture. The current model is known to be general tier with medium reasoning. Run the Handoff Guard preflight.",
+      "expected": "Invoke Handoff Guard and return PASS with execution_allowed=true."
+    },
+    {
+      "id": "positive-unknown-model-preflight",
+      "prompt": "Run the preflight for a moderate implementation, but the host cannot reliably report the current model or reasoning effort.",
+      "expected": "Invoke Handoff Guard, return UNVERIFIED, show the recommendation, and keep execution_allowed=true. Do not block only because metadata is unavailable."
+    },
+    {
+      "id": "positive-material-mismatch",
+      "prompt": "A simple documentation task is ready, but the current model is known to be a strong-tier model. Check whether execution should proceed.",
+      "expected": "Invoke Handoff Guard and return BLOCK with a manual switch recommendation."
+    },
+    {
+      "id": "positive-quota-fallback",
+      "prompt": "Codex quota is unavailable for this moderate implementation. Recommend an available fallback provider and reasoning effort, but do not switch providers automatically.",
+      "expected": "Invoke Handoff Guard, recommend the configured fallback provider, and clearly state that any switch is manual."
+    }
+  ],
+  "negative": [
+    {
+      "id": "negative-ordinary-coding-request",
+      "prompt": "Implement the requested bug fix in the current repository.",
+      "expected": "Do not invoke Handoff Guard solely because this is a coding request; no handoff boundary, routing request, or preflight request is present."
+    },
+    {
+      "id": "negative-general-explanation",
+      "prompt": "Explain what a database index is in two paragraphs.",
+      "expected": "Do not invoke Handoff Guard; this is a general explanation with no agent boundary or model decision."
+    },
+    {
+      "id": "negative-unrelated-file-task",
+      "prompt": "Rename the README heading and update its spelling.",
+      "expected": "Do not invoke Handoff Guard; this is a local mechanical edit without a handoff or preflight requirement."
+    }
+  ]
+}

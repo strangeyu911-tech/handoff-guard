@@ -62,6 +62,14 @@ $CODEX_HOME/skills/handoff-guard/
 
 如果没有设置 `CODEX_HOME`，请使用宿主 Agent 的标准用户 skills 目录（通常是 `~/.codex/skills/`）。文件夹根目录必须包含 `SKILL.md`。
 
+### Plugin 安装
+
+仓库同时包含一个纯 skills-only Plugin manifest。Plugin 的标准 Skill 路径是 `skills/handoff-guard/SKILL.md`；根目录 `SKILL.md` 仍然保留，用于直接从 GitHub 按原来的 GitHub Skill 方式安装。Plugin 不包含 MCP Server，也不包含 App manifest。
+
+审核并进入 OpenAI Plugin Directory 后，这里可以补充“Install from ChatGPT Plugin Directory”的安装说明。目前 Handoff Guard 尚未上架该目录。
+
+提交前品牌素材待办：准备经过审核且具备相应用权的 logo/icon 后，再将路径写入 `.codex-plugin/plugin.json`。当前 manifest 不虚构或声明任何 logo/icon。
+
 ## 使用方式
 
 在架构或实现阶段交接时，请 Agent 生成 Handoff Guard handoff，并使用 `assets/handoff-template.md`。checkpoint 应填写真实 commit、文件 checkpoint，或明确写 `none`。
@@ -132,7 +140,11 @@ python scripts/validate_handoff.py path/to/handoff.md
 
 ```text
 handoff-guard/
+├── .codex-plugin/plugin.json
 ├── SKILL.md
+├── skills/handoff-guard/
+│   ├── SKILL.md
+│   └── agents/openai.yaml
 ├── README.md
 ├── README.zh-CN.md
 ├── LICENSE
@@ -147,9 +159,14 @@ handoff-guard/
 │   └── validate_handoff.py
 ├── evals/evals.json
 └── tests/
+    ├── test_plugin_structure.py
     ├── test_select_model.py
     └── test_validate_handoff.py
 ```
+
+## Plugin submission 测试
+
+`evals/plugin-submission-tests.json` 包含 5 个 positive 和 3 个 negative fixture，覆盖 handoff 创建、已知模型 preflight、明显不匹配、Provider fallback、普通请求不触发，以及无法读取模型/reasoning metadata 时返回 `UNVERIFIED` 且不阻断执行。
 
 ## Limitations
 
