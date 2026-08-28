@@ -1,112 +1,127 @@
-# Handoff Guard
+# Handoff Guard（交接守卫）
 
 [English](README.md) | 简体中文
 
-> Handoff Guard 是面向 coding agent 的 model-aware handoff skill：保存已经确定的决策，推荐足够且成本最低的模型，并阻止明显不合适的模型开始执行。
+> 交接守卫是面向编码代理的模型感知交接技能：保存已经确定的决策，推荐足够且成本最低的模型，并在接收任务的代理开始执行前检查配置。
 
-它工作在 handoff / decision 层：根据任务信息给出 provider、model 和 reasoning effort 建议，并在执行前检查当前配置是否明显不合适。
+交接守卫工作在交接和决策层：为接收任务的代理提供模型提供方和模型推荐，并在开始实施前执行检查。它不会自动切换模型或模型提供方。
 
 ## 项目简介
 
-Agent 交接时，通常会同时丢失两类信息：一是当前实现状态和已确定的架构决策，二是下一阶段应该使用什么模型。结果可能是新 Agent 重新探索已经决定的方案、简单任务使用昂贵模型，或者复杂任务交给明显不足的模型。
+代理交接时，通常会同时丢失两类信息：一是当前实现状态和已经确定的架构决策，二是下一阶段应该使用什么模型。结果可能是新代理重新探索已经决定的方案、简单任务使用昂贵模型，或者复杂任务交给明显不足的模型。
 
-Handoff Guard 把这三件事放在一个轻量工作流中：
+交接守卫把这三件事放进一个轻量工作流中：
 
-- **Model-aware handoff：** 保存当前状态、已完成内容、checkpoint、锁定决策和 guardrails。
-- **Model recommendation：** 使用透明 heuristic 推荐 provider、model tier/model 和 reasoning effort。
-- **Execution preflight：** 在真正修改文件前返回 `PASS`、`BLOCK` 或 `UNVERIFIED`。
+- **结构化交接：** 保存当前状态、已完成内容、检查点、已经确定的决策和执行约束。
+- **模型推荐：** 使用透明的启发式规则，推荐模型提供方、模型档位、具体模型和推理强度。
+- **执行前检查：** 在真正修改文件前检查当前配置，并返回 `PASS`、`BLOCK` 或 `UNVERIFIED`。
 
-## 和 Model Router、普通 Handoff Skill 的区别
+## 与 model router 和普通交接技能的区别
 
-传统 Model Router 工作在模型调用层，可以直接把请求 dispatch 到不同模型或 Provider。
+model router 属于自动路由或自动选择模型的另一类工具，工作在模型调用层，可以直接把请求分发到不同模型或模型提供方。
 
-普通 Handoff Skill 主要负责交接什么内容。Handoff Guard 除了保存交接信息，还会推荐下一阶段应该使用的模型/provider，并检查当前模型是否适合开始执行。
+普通交接技能主要负责交接哪些内容。交接守卫除了保存交接信息，还会为下一阶段推荐模型提供方和模型，并在工作代理真正执行前检查当前配置是否适合开始执行。
 
-Handoff Guard 的推荐结果是给宿主环境和用户使用的决策信息，不代表它拥有自动调用其他模型的权限。
+交接守卫不负责自动切换模型。推荐结果是提供给宿主环境和用户的决策信息，不代表它拥有自动调用其他模型、切换模型或迁移当前会话的权限。
 
-## Handoff Guard 不是什么
+## 交接守卫不是什么
 
-Handoff Guard 不是运行时 LLM Gateway，也不是真正意义上的自动 Model Router。
+交接守卫不是运行时大语言模型网关，也不是 model router 这一类自动路由工具。
 
-它不能控制 ChatGPT 的模型选择器，不能保证自动切换模型或 Provider，也不会自动迁移当前会话或把请求 dispatch 到另一个模型。需要切换时，它会告诉用户应该手动选择什么。
+它不能控制 ChatGPT 的模型选择器，不能自动切换模型或模型提供方，也不会自动迁移当前会话或把请求分发到另一个模型。需要切换时，它会告诉用户应该手动选择什么。
 
-如果宿主环境无法可靠读取当前模型，Handoff Guard 会将其标记为“未验证”，而不是“模型不匹配”；它会展示推荐配置，但不会因此阻止执行。Unknown is advisory, not blocking。
+如果宿主环境无法可靠读取当前模型或推理强度，交接守卫会返回 `UNVERIFIED`，而不是把配置当成不匹配。它会明确说明无法验证，展示推荐配置，但不会因此阻止执行。
 
-## Handoff 生成边界
+## 交接生成边界
 
-只有在能够可靠确认当前是普通 Chat / discussion 场景，并且已经形成明确开发边界时，Handoff Guard 才会自动生成 handoff。这里的开发边界包括：已确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / checkpoint 结论。
+只有在能够可靠确认当前是普通聊天 / 讨论场景，并且已经形成明确开发边界时，交接守卫才会自动生成交接。这里的开发边界包括：已经确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / 检查点结论。
 
-只要当前线程访问或修改过项目文件、运行过终端命令、修改过代码、执行过测试、进行过 Git 操作，或出现其他明显的代码实施行为，就视为 Work / implementation 环境。此时 Handoff Guard 不会递归生成或附带新的 Work handoff，即使任务已完成、已有 checkpoint 或 commit，或者已经形成下一阶段计划。如果无法可靠判断当前模式，默认关闭自动生成。如果用户明确要求“给我一个 Work handoff”或“生成 handoff”，则可以覆盖这一自动限制。
+只要当前线程访问或修改过项目文件、运行过终端命令、修改过代码、执行过测试、进行过 Git 操作，或出现其他明显的代码实施行为，就视为工作 / 实施环境。此时交接守卫不会递归生成或附带新的工作交接，即使任务已完成、已有检查点或提交，或者已经形成下一阶段计划。如果无法可靠判断当前模式，默认不自动生成。如果用户明确要求“给我一个工作交接”或“生成交接”，则可以覆盖这一自动限制。
 
 ## 核心工作流程
 
 ```text
-Chat / Architect Agent
+聊天 / 架构代理
         |
-        | 结构化 handoff + 模型/provider 推荐
+        | 结构化交接
+        | + 模型提供方 / 模型推荐
         v
-接收任务的 Work Agent -----> execution preflight
-                              |
-                 +------------+------------+
-                 |                         |
-             配置合适                    明显不匹配
-                 |                         |
-                 v                         v
-             按范围执行              BLOCK，提醒用户手动切换
-                 |
-                 v
-            更新 checkpoint
+接收任务的工作代理
+        |
+        v
+执行前检查
+        |
++----------------+----------------+----------------+
+|配置合适        |明显不匹配      |无法确认        |
+|                |                |当前配置        |
+|                |                |                |
+|PASS            |BLOCK           |UNVERIFIED      |
+|                |                |                |
+        v                v                v
+|按范围执行      |停止执行并提醒  |说明无法验证，  |
+|                |用户手动切换    |但允许继续执行  |
+        \                |                /
+         +---------------+----------------+
+                         |
+                         v
+                     更新检查点
 ```
+
+三种执行前检查结果的含义如下：
+
+- **PASS：** 已知配置符合要求，按范围正常执行。
+- **BLOCK：** 已确认存在明显配置不匹配，停止执行并提醒用户手动切换模型。
+- **UNVERIFIED：** 无法可靠读取或确认当前模型或推理强度；明确说明无法验证，但不得因此阻止执行。
 
 ## 安装方式
 
-将 `handoff-guard` 文件夹复制到 Agent Skills 可发现的目录：
+将 `handoff-guard` 文件夹复制到代理可以发现的技能目录：
 
 ```text
 $CODEX_HOME/skills/handoff-guard/
 ```
 
-如果没有设置 `CODEX_HOME`，请使用宿主 Agent 的标准用户 skills 目录（通常是 `~/.codex/skills/`）。文件夹根目录必须包含 `SKILL.md`。
+如果没有设置 `CODEX_HOME`，请使用宿主代理的标准用户技能目录（通常是 `~/.codex/skills/`）。文件夹根目录必须包含 `SKILL.md`。技能会自动被发现；界面元数据位于 `agents/openai.yaml`。
 
-### Plugin 安装
+### 插件安装
 
-仓库同时包含一个纯 skills-only Plugin manifest。Plugin 的标准 Skill 路径是 `skills/handoff-guard/SKILL.md`；根目录 `SKILL.md` 仍然保留，用于直接从 GitHub 按原来的 GitHub Skill 方式安装。Plugin 不包含 MCP Server，也不包含 App manifest。
+仓库同时包含一个仅含技能的插件清单。插件的标准技能路径是 `skills/handoff-guard/SKILL.md`；根目录的 `SKILL.md` 仍然保留，用于直接从 GitHub 按原来的技能方式安装。插件有意不包含 MCP 服务器或应用清单。
 
-审核并进入 OpenAI Plugin Directory 后，这里可以补充“Install from ChatGPT Plugin Directory”的安装说明。目前 Handoff Guard 尚未上架该目录。
+审核并进入 OpenAI 插件目录后，这里可以补充“Install from ChatGPT Plugin Directory”的安装说明。目前交接守卫尚未上架该目录。
 
-提交前品牌素材待办：准备经过审核且具备相应用权的 logo/icon 后，再将路径写入 `.codex-plugin/plugin.json`。当前 manifest 不虚构或声明任何 logo/icon。
+提交前品牌素材待办：准备经过审核且具备相应用权的标识图标后，再将路径写入 `.codex-plugin/plugin.json`。当前清单不虚构或声明任何标识图标。
 
 ## 使用方式
 
-在普通 Chat / discussion 场景形成架构或实现边界时，请 Agent 生成 Handoff Guard handoff。在 Work / implementation 环境中，完成实施后不会自动附带 handoff；如确实需要，请明确请求生成。请使用 `assets/handoff-template.md`，并填写真实 commit、文件 checkpoint，或明确写 `none`。
+在普通聊天 / 讨论场景形成架构或实施边界时，请代理生成交接守卫交接。在工作 / 实施环境中，完成实施后不会自动附带交接；如确实需要，请明确请求生成。请使用 `assets/handoff-template.md`，并填写真实的提交、文件检查点，或明确写 `none`。
 
 ### 模型推荐
 
-使用 selector：
+使用选择器：
 
 ```bash
 python scripts/select_model.py --input '{"task_complexity":"moderate","task_type":"implementation","architecture_settled":true,"provider_availability":["codex","workbuddy"]}'
 ```
 
-一般规则是：简单文档或机械修改使用 `budget`，已确定方案的普通实现使用 `general`，复杂架构和疑难 bug 使用 `strong`。selector 只输出推荐，不会调用或切换宿主中的模型。
+一般规则是：简单文档或机械修改使用 `budget`，已确定方案的普通实施使用 `general`，复杂架构和疑难错误使用 `strong`。选择器只输出推荐，不会调用或切换宿主中的模型。
 
-### Preflight
+### 执行前检查
 
 当宿主能提供这些信息时，把 `current_model` 和 `current_reasoning_effort` 一起传入。结果会包含：
 
 - `PASS`：当前模型已知且合适，可以继续。
 - `BLOCK`：当前模型明显过强或过弱，应停止并请用户手动切换。
-- `UNVERIFIED`：宿主没有可靠提供模型或 reasoning 信息。显示推荐并允许继续执行。
+- `UNVERIFIED`：宿主没有可靠提供模型或推理强度信息。显示推荐并允许继续执行。
 
-Medium / High reasoning effort 的轻微差异默认不会阻止执行。
+推理强度在 `medium` / `high` 之间的轻微差异默认不会阻止执行。
 
-### Unknown model 行为
+### 无法确认模型时的行为
 
-Unknown is advisory, not blocking：无法检测当前模型不等于模型不匹配。Handoff Guard 会显示推荐模型和 reasoning effort，提示用户按需手动核对，但不会仅因 unknown 状态拒绝执行。
+无法确认只提供提示，不会阻止执行：无法检测当前模型不等于模型不匹配。交接守卫会显示推荐模型和推理强度，提示用户按需手动核对，但不会仅因无法确认而拒绝执行。
 
-## Provider fallback / WorkBuddy 示例
+## 模型提供方回退 / WorkBuddy 示例
 
-当用户表示 GPT / Codex 没有额度，或者希望节省 GPT 额度时，这是 **fallback recommendation**，不是 **automatic provider switch**。
+当用户表示 GPT / Codex 没有额度，或者希望节省 GPT 额度时，这是**回退推荐**，不是**自动切换模型提供方**。
 
 输入中可以声明：
 
@@ -124,17 +139,17 @@ Unknown is advisory, not blocking：无法检测当前模型不等于模型不�
 推荐结果示例：
 
 ```text
-Recommended provider: WorkBuddy
-Recommended model: HY3
-Recommended reasoning: Medium
-Action: 请根据当前宿主环境手动切换
+推荐模型提供方：WorkBuddy
+推荐模型：HY3
+推荐推理强度：Medium
+操作：请根据当前宿主环境手动切换
 ```
 
-默认 WorkBuddy profile 包含 Auto、HY3、GLM-5.3、GLM-5.2、GLM-5.1、GLM-5V-Turbo、MiniMax-M3、Kimi-K3、Kimi-K2.7-Code、Kimi-K2.6、Deepseek-V4-Flash 和 Deepseek-V4-Pro。tier 和 cost class 是可维护的 heuristic，不是 benchmark 排名，也没有把未确认的倍率写死。
+默认 WorkBuddy 配置包含 Auto、HY3、GLM-5.3、GLM-5.2、GLM-5.1、GLM-5V-Turbo、MiniMax-M3、Kimi-K3、Kimi-K2.7-Code、Kimi-K2.6、Deepseek-V4-Flash 和 Deepseek-V4-Pro。模型档位和成本类别是可维护的启发式配置，不是基准排名，也没有把未确认的倍率写死。
 
-## Handoff 校验
+## 交接校验
 
-校验 Markdown 或 JSON handoff：
+校验 Markdown 或 JSON 格式的交接：
 
 ```bash
 python scripts/validate_handoff.py path/to/handoff.md
@@ -170,24 +185,23 @@ handoff-guard/
     └── test_validate_handoff.py
 ```
 
-## Plugin submission 测试
+## 插件提交测试
 
-`evals/plugin-submission-tests.json` 包含 7 个 positive 和 8 个 negative fixture，覆盖普通 Chat 中创建 handoff、用户显式请求、Work 环境防递归、已知模型 preflight、明显不匹配、Provider fallback，以及无法读取模型/reasoning metadata 时返回 `UNVERIFIED` 且不阻断执行。
+`evals/plugin-submission-tests.json` 包含 7 个正向和 8 个反向用例，用于插件审核。它们覆盖普通聊天中创建交接、用户明确请求、工作环境防递归、已知模型执行前检查、明显不匹配、模型提供方回退，以及模型或推理元数据不可用时返回 `UNVERIFIED` 且不阻断执行的规则。
 
-## Limitations
+## 限制
 
-- 路由是透明 heuristic，不是 benchmark，也不是实时价格比较。
-- Provider 是否可用由调用方提供；Skill 不调用 Provider API。
-- cost class 是粗粒度配置标签，不代表实时价格。
-- Skill 不能证明实现一定正确，只能保存交接契约并校验必要字段。
-- 是否能读取当前模型取决于宿主环境；无法读取时进入 advisory / unverified 模式。
+- 路由使用透明的启发式规则，不是基准测试，也不是实时价格比较。
+- 模型提供方是否可用由调用方提供；技能不会调用模型提供方接口。
+- 成本类别是粗粒度配置标签，应由项目维护者维护。
+- 交接不能证明实施一定正确；它只能保存执行契约并校验必要字段。
 
-## Roadmap
+## 后续计划
 
-- 在不改变 selector 核心逻辑的前提下增加更多 provider profile。
-- 保持核心 handoff 契约小而稳定，同时支持项目级可选字段。
-- 为更多 Agent 环境增加独立 eval fixture。
+- 在不改变选择器逻辑的前提下增加更多模型提供方配置。
+- 保持核心交接契约小而稳定，同时支持项目级可选字段。
+- 为更多代理环境增加独立评测用例。
 
-## License
+## 许可证
 
 MIT，详见 [LICENSE](LICENSE)。

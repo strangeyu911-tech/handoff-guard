@@ -2,9 +2,9 @@
 
 English | [简体中文](README.zh-CN.md)
 
-> Handoff Guard is a model-aware handoff skill for coding agents. It preserves settled decisions, recommends the cheapest sufficient model, and prevents execution with an obviously mismatched model.
+> Handoff Guard is a model-aware handoff skill for coding agents. It preserves settled decisions, recommends the cheapest sufficient model, and checks the receiving agent's configuration before execution.
 
-It operates at the handoff and decision layer: the recommendation and preflight result help the user choose the next model/provider for the host they are using.
+It operates at the handoff and decision layer: it gives the receiving agent a provider/model recommendation and runs a preflight check before implementation begins. It does not automatically switch models or providers.
 
 ## Why it exists
 
@@ -14,17 +14,17 @@ Agent handoffs often lose two things at once: the implementation contract and th
 
 Handoff Guard combines three bounded capabilities:
 
-- **Model-aware handoff:** preserves current state, completed work, checkpoints, locked decisions, and guardrails.
+- **Structured handoff:** preserves current state, completed work, checkpoints, locked decisions, and execution guardrails.
 - **Model recommendation:** recommends a provider, model tier/model, and reasoning effort using a transparent heuristic.
-- **Execution preflight:** returns `PASS`, `BLOCK`, or `UNVERIFIED` before implementation begins.
+- **Execution preflight:** checks the current configuration before files are changed and returns `PASS`, `BLOCK`, or `UNVERIFIED`.
 
 ## What Handoff Guard is not
 
-Handoff Guard is not a runtime LLM gateway or automatic model router. Traditional model routers control the model invocation layer and can dispatch requests directly to different models or providers.
+Handoff Guard is not a runtime LLM gateway or an automatic model router. A model router belongs to a different category of tools: it automatically routes requests to different models or providers at the invocation layer.
 
-Handoff Guard does not control ChatGPT's model picker, automatically switch models or providers, migrate the current session, or guarantee that the host exposes the exact underlying model identity. It recommends the manual switch when the host requires one.
+Handoff Guard does not control ChatGPT's model picker, automatically switch models or providers, migrate the current session, or guarantee that the host exposes the exact underlying model identity. It gives the user a recommendation for a manual switch when one is needed.
 
-If the active model cannot be detected reliably, Handoff Guard treats the configuration as unverified rather than mismatched. The recommendation is shown and execution may continue.
+If the active model or reasoning effort cannot be detected reliably, Handoff Guard returns `UNVERIFIED` rather than treating the configuration as mismatched. It explains that the configuration could not be verified, shows the recommendation, and allows execution to continue.
 
 ## Handoff emission boundary
 
@@ -37,20 +37,37 @@ Any project file access or edit, terminal command, code change, test run, Git op
 ```text
 Chat / Architect Agent
         |
-        | structured handoff + routing recommendation
+        | structured handoff
+        | + provider / model recommendation
         v
-Receiving Work Agent -----> preflight
-                              |
-                 +------------+------------+
-                 |                         |
-             tier aligned              mismatch
-                 |                         |
-                 v                         v
-           implement scope          stop and ask to switch
-                 |
-                 v
-          update checkpoint
+Receiving Work Agent
+        |
+        v
+Execution preflight
+        |
++----------------+----------------+----------------+
+|                |                |
+configuration    clear mismatch  cannot confirm
+aligned          detected         current settings
+|                |                |
+PASS             BLOCK            UNVERIFIED
+|                |                |
+        v                v                v
+Execute in       Stop and ask     State unable
+scope            the user to      to verify;
+                 switch manually  continue
+        \                |                /
+         +---------------+----------------+
+                         |
+                         v
+                 Update checkpoint
 ```
+
+The three preflight outcomes have these meanings:
+
+- **PASS:** the known configuration is suitable; execute normally within scope.
+- **BLOCK:** a clear configuration mismatch is confirmed; stop and ask the user to switch models manually.
+- **UNVERIFIED:** the current model or reasoning effort cannot be read or confirmed reliably; explain that it could not be verified, but do not block execution.
 
 ## Installation
 
@@ -86,7 +103,7 @@ The selector recommends the cheapest configured tier that is sufficient for the 
 
 For preflight, include `current_model` and `current_reasoning_effort` when the host exposes them. The result contains an explicit `status`: `PASS`, `BLOCK`, or `UNVERIFIED`, plus `block_current_execution`. Only a material mismatch or declared quota constraint blocks execution.
 
-If the host cannot reliably expose the active model, Handoff Guard treats the configuration as unverified rather than mismatched. It shows the recommendation and allows execution to continue. Unknown is advisory, not blocking; the user can verify the model picker manually if needed.
+If the host cannot reliably expose the active model or reasoning effort, Handoff Guard returns `UNVERIFIED`, shows the recommendation, and allows execution to continue. Unknown metadata is advisory, not blocking; the user can verify the model picker manually if needed.
 
 For validation:
 
