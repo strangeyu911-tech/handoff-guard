@@ -1,5 +1,7 @@
 # Handoff Guard — Development Handoff
 
+Use this template only after the handoff emission gate allows generation, or when the user explicitly requests a handoff. It must not be appended automatically by a Work / implementation task after execution, testing, or a checkpoint.
+
 ## Recommended model
 
 - Provider: `<provider>`

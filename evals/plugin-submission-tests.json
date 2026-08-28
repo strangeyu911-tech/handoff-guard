@@ -3,8 +3,18 @@
   "positive": [
     {
       "id": "positive-structured-handoff",
-      "prompt": "The architecture decision is settled. Create a structured handoff for the receiving coding agent with the current state, completed work, checkpoint, next objective, locked boundaries, and do-not guardrails.",
-      "expected": "Invoke Handoff Guard and produce all required handoff fields without reopening the architecture decision."
+      "prompt": "In an ordinary Chat / discussion conversation, the architecture decision is settled. Create a structured handoff for the receiving coding agent with the current state, completed work, checkpoint, next objective, locked boundaries, and do-not guardrails.",
+      "expected": "Invoke Handoff Guard and produce all required handoff fields without reopening the architecture decision; the handoff can generate."
+    },
+    {
+      "id": "positive-chat-settled-decision",
+      "prompt": "This is an ordinary Chat / discussion conversation. We have reached a concrete development decision and a specific next-stage implementation plan, with no file access, terminal commands, tests, or Git operations in this thread. May Handoff Guard generate the Work handoff automatically?",
+      "expected": "Handoff Guard can generate the handoff because the mode is reliably ordinary Chat and a concrete development boundary exists."
+    },
+    {
+      "id": "positive-explicit-handoff-request",
+      "prompt": "The implementation is complete in Work mode. Give me a Work handoff with the current state, checkpoint, next objective, locked boundaries, and guardrails.",
+      "expected": "Handoff Guard can generate the explicitly requested handoff despite the automatic-emission restriction."
     },
     {
       "id": "positive-known-suitable-preflight",
@@ -28,6 +38,31 @@
     }
   ],
   "negative": [
+    {
+      "id": "negative-work-file-edit-complete",
+      "prompt": "In the current Work / implementation environment, edit the project files, finish the bug fix, and summarize the result. Do not ask for a handoff.",
+      "expected": "Do not automatically generate or append a Work handoff after the file edits are complete."
+    },
+    {
+      "id": "negative-work-tests-complete",
+      "prompt": "In Work mode, run the test suite, confirm it passes, and finish the task. No handoff was requested.",
+      "expected": "Do not automatically generate or append a Work handoff after running tests."
+    },
+    {
+      "id": "negative-work-commit-complete",
+      "prompt": "In Work mode, create the requested commit and report its hash. The user did not request a handoff.",
+      "expected": "Do not automatically generate or append a Work handoff after the Git commit."
+    },
+    {
+      "id": "negative-uncertain-with-implementation-signals",
+      "prompt": "It is unclear whether this is Chat or Work, but the thread contains terminal and project-file operation signals. The task is complete and no handoff was explicitly requested.",
+      "expected": "Fail closed: do not automatically generate a handoff when the mode is uncertain and implementation signals are present."
+    },
+    {
+      "id": "negative-work-next-stage-plan",
+      "prompt": "Work mode implementation is complete and the next-stage plan has been written. The user did not ask for a handoff.",
+      "expected": "Do not automatically generate or append a Work handoff even when a next-stage plan exists."
+    },
     {
       "id": "negative-ordinary-coding-request",
       "prompt": "Implement the requested bug fix in the current repository.",

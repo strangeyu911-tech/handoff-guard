@@ -2,6 +2,10 @@
 
 A handoff is a compact execution contract between agents. It must preserve decisions that should not be re-planned and provide enough routing/preflight data for the next agent.
 
+## Emission boundary
+
+Automatic handoff generation is allowed only in a reliably ordinary Chat / discussion conversation that has reached a settled architecture decision, a concrete next-stage implementation plan, or a stage-level acceptance/checkpoint conclusion. A thread with project file access or edits, terminal commands, code changes, tests, Git operations, or other clear implementation activity is a Work / implementation environment. Do not generate or append a new Work handoff there, even after completion, a checkpoint, a commit, or a next-stage plan. If the mode is uncertain, do not generate automatically. An explicit user request for a handoff overrides this automatic gate.
+
 Required sections or labels:
 
 1. `Recommended model`

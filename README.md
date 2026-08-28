@@ -26,6 +26,12 @@ Handoff Guard does not control ChatGPT's model picker, automatically switch mode
 
 If the active model cannot be detected reliably, Handoff Guard treats the configuration as unverified rather than mismatched. The recommendation is shown and execution may continue.
 
+## Handoff emission boundary
+
+Handoff Guard generates a handoff automatically only in a reliably ordinary Chat / discussion conversation after a concrete development boundary has been reached: a settled architecture decision, a specific next-stage implementation plan, or a stage-level acceptance/checkpoint conclusion.
+
+Any project file access or edit, terminal command, code change, test run, Git operation, or other clear implementation activity makes the current thread a Work / implementation environment. Handoff Guard will not recursively generate or append a new Work handoff there—even when the task is complete, a checkpoint or commit exists, or a next-stage plan has been written. If the mode cannot be determined reliably, it fails closed and does not generate an automatic handoff. An explicit request such as “give me a Work handoff” or “generate a handoff” overrides this automatic restriction.
+
 ## Workflow
 
 ```text
@@ -66,7 +72,7 @@ Branding TODO before directory submission: add a reviewed logo/icon asset with t
 
 ## Usage
 
-When ending an architecture or implementation conversation, ask the agent to create a Handoff Guard handoff. Use the template in `assets/handoff-template.md` and include a real commit/file checkpoint or explicitly write `none`.
+When a Chat / discussion conversation reaches an architecture or implementation boundary, ask the agent to create a Handoff Guard handoff. In a Work / implementation environment, no handoff is appended automatically after implementation; request one explicitly if needed. Use the template in `assets/handoff-template.md` and include a real commit/file checkpoint or explicitly write `none`.
 
 For deterministic routing:
 
@@ -134,7 +140,7 @@ handoff-guard/
 
 ## Plugin submission tests
 
-`evals/plugin-submission-tests.json` contains five positive and three negative fixtures for Plugin review. They cover handoff creation, known-model preflight, material mismatches, provider fallback, non-triggering ordinary requests, and the rule that unavailable model/reasoning metadata returns `UNVERIFIED` without blocking execution.
+`evals/plugin-submission-tests.json` contains seven positive and eight negative fixtures for Plugin review. They cover ordinary-Chat handoff creation, explicit handoff requests, Work-environment no-recursion cases, known-model preflight, material mismatches, provider fallback, and the rule that unavailable model/reasoning metadata returns `UNVERIFIED` without blocking execution.
 
 ## Limitations
 

@@ -23,6 +23,20 @@ class DocumentationTests(unittest.TestCase):
             self.assertNotIn("automatically switches chatgpt", text)
             self.assertNotIn("自动切换 chatgpt 模型", text)
 
+    def test_emission_gate_is_present_in_both_skills_and_readmes(self):
+        root_skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        canonical_skill = (ROOT / "skills" / "handoff-guard" / "SKILL.md").read_text(encoding="utf-8")
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+        for text in (root_skill, canonical_skill, english):
+            self.assertRegex(text.lower(), r"work.{0,80}implementation environment")
+            self.assertRegex(text.lower(), r"explicit.{0,80}(request|user)")
+        self.assertIn("Work / implementation 环境", chinese)
+        self.assertIn("明确要求", chinese)
+        self.assertIn("Do not append a new Work handoff", root_skill)
+        self.assertIn("fail closed", root_skill)
+        self.assertIn("不会递归生成", chinese)
+
 
 if __name__ == "__main__":
     unittest.main()

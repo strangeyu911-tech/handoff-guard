@@ -32,6 +32,12 @@ Handoff Guard 不是运行时 LLM Gateway，也不是真正意义上的自动 Mo
 
 如果宿主环境无法可靠读取当前模型，Handoff Guard 会将其标记为“未验证”，而不是“模型不匹配”；它会展示推荐配置，但不会因此阻止执行。Unknown is advisory, not blocking。
 
+## Handoff 生成边界
+
+只有在能够可靠确认当前是普通 Chat / discussion 场景，并且已经形成明确开发边界时，Handoff Guard 才会自动生成 handoff。这里的开发边界包括：已确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / checkpoint 结论。
+
+只要当前线程访问或修改过项目文件、运行过终端命令、修改过代码、执行过测试、进行过 Git 操作，或出现其他明显的代码实施行为，就视为 Work / implementation 环境。此时 Handoff Guard 不会递归生成或附带新的 Work handoff，即使任务已完成、已有 checkpoint 或 commit，或者已经形成下一阶段计划。如果无法可靠判断当前模式，默认关闭自动生成。如果用户明确要求“给我一个 Work handoff”或“生成 handoff”，则可以覆盖这一自动限制。
+
 ## 核心工作流程
 
 ```text
@@ -72,7 +78,7 @@ $CODEX_HOME/skills/handoff-guard/
 
 ## 使用方式
 
-在架构或实现阶段交接时，请 Agent 生成 Handoff Guard handoff，并使用 `assets/handoff-template.md`。checkpoint 应填写真实 commit、文件 checkpoint，或明确写 `none`。
+在普通 Chat / discussion 场景形成架构或实现边界时，请 Agent 生成 Handoff Guard handoff。在 Work / implementation 环境中，完成实施后不会自动附带 handoff；如确实需要，请明确请求生成。请使用 `assets/handoff-template.md`，并填写真实 commit、文件 checkpoint，或明确写 `none`。
 
 ### 模型推荐
 
@@ -166,7 +172,7 @@ handoff-guard/
 
 ## Plugin submission 测试
 
-`evals/plugin-submission-tests.json` 包含 5 个 positive 和 3 个 negative fixture，覆盖 handoff 创建、已知模型 preflight、明显不匹配、Provider fallback、普通请求不触发，以及无法读取模型/reasoning metadata 时返回 `UNVERIFIED` 且不阻断执行。
+`evals/plugin-submission-tests.json` 包含 7 个 positive 和 8 个 negative fixture，覆盖普通 Chat 中创建 handoff、用户显式请求、Work 环境防递归、已知模型 preflight、明显不匹配、Provider fallback，以及无法读取模型/reasoning metadata 时返回 `UNVERIFIED` 且不阻断执行。
 
 ## Limitations
 

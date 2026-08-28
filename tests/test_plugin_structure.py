@@ -48,12 +48,12 @@ class PluginStructureTests(unittest.TestCase):
         ):
             self.assertTrue((skill_root / relative).resolve().is_file(), relative)
 
-    def test_submission_fixture_has_five_positive_and_three_negative_cases(self):
+    def test_submission_fixture_has_seven_positive_and_eight_negative_cases(self):
         fixture = json.loads(
             (ROOT / "evals" / "plugin-submission-tests.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(len(fixture["positive"]), 5)
-        self.assertEqual(len(fixture["negative"]), 3)
+        self.assertEqual(len(fixture["positive"]), 7)
+        self.assertEqual(len(fixture["negative"]), 8)
         self.assertTrue(any("UNVERIFIED" in item["expected"] for item in fixture["positive"]))
 
 
