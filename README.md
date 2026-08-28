@@ -1,18 +1,30 @@
 # Handoff Guard
 
-Handoff Guard is a small, open-source Agent Skill for coding-agent boundaries:
+English | [简体中文](README.zh-CN.md)
 
-> Preserve decisions, choose the cheapest sufficient model, and stop the next agent from re-planning settled work.
+> Handoff Guard is a model-aware handoff skill for coding agents. It preserves settled decisions, recommends the cheapest sufficient model, and prevents execution with an obviously mismatched model.
+
+It operates at the handoff and decision layer: the recommendation and preflight result help the user choose the next model/provider for the host they are using.
 
 ## Why it exists
 
 Agent handoffs often lose two things at once: the implementation contract and the model decision. The receiving agent then spends tokens re-discovering architecture, or runs a simple task on an unnecessarily expensive model, or starts a complex task on a model that is unlikely to finish it reliably.
 
-Handoff Guard joins those concerns:
+## What Handoff Guard is
 
-- **Model Router:** decides who should do the work.
-- **Handoff Skill:** decides what should be handed over.
-- **Handoff Guard:** decides what to hand over, which model should do the next stage, and whether that agent may start.
+Handoff Guard combines three bounded capabilities:
+
+- **Model-aware handoff:** preserves current state, completed work, checkpoints, locked decisions, and guardrails.
+- **Model recommendation:** recommends a provider, model tier/model, and reasoning effort using a transparent heuristic.
+- **Execution preflight:** returns `PASS`, `BLOCK`, or `UNVERIFIED` before implementation begins.
+
+## What Handoff Guard is not
+
+Handoff Guard is not a runtime LLM gateway or automatic model router. Traditional model routers control the model invocation layer and can dispatch requests directly to different models or providers.
+
+Handoff Guard does not control ChatGPT's model picker, automatically switch models or providers, migrate the current session, or guarantee that the host exposes the exact underlying model identity. It recommends the manual switch when the host requires one.
+
+If the active model cannot be detected reliably, Handoff Guard treats the configuration as unverified rather than mismatched. The recommendation is shown and execution may continue.
 
 ## Workflow
 
@@ -54,6 +66,10 @@ For deterministic routing:
 python scripts/select_model.py --input '{"task_complexity":"moderate","task_type":"implementation","architecture_settled":true,"provider_availability":["codex","workbuddy"]}'
 ```
 
+### Model recommendation
+
+The selector recommends the cheapest configured tier that is sufficient for the task: budget for simple work, general for settled implementation, and strong for complex architecture or difficult bugs. The output is a recommendation for the host; it does not invoke or switch the selected model.
+
 For preflight, include `current_model` and `current_reasoning_effort` when the host exposes them. The result contains an explicit `status`: `PASS`, `BLOCK`, or `UNVERIFIED`, plus `block_current_execution`. Only a material mismatch or declared quota constraint blocks execution.
 
 If the host cannot reliably expose the active model, Handoff Guard treats the configuration as unverified rather than mismatched. It shows the recommendation and allows execution to continue. Unknown is advisory, not blocking; the user can verify the model picker manually if needed.
@@ -68,7 +84,16 @@ The validator returns JSON and a non-zero exit status when a required field is m
 
 ## Provider fallback
 
-Provider choice is configuration-driven. If the user says GPT/Codex has no quota, set `quota_unavailable: true` and identify `quota_provider`; the default profile routes to an available WorkBuddy provider. If the user explicitly prefers WorkBuddy, set `preferred_provider: "workbuddy"`.
+Provider recommendation is configuration-driven. If the user says GPT/Codex has no quota, set `quota_unavailable: true` and identify `quota_provider`; the default profile recommends an available WorkBuddy provider. If the user explicitly prefers WorkBuddy, set `preferred_provider: "workbuddy"`. The user may then switch provider manually according to the host environment.
+
+Example recommendation:
+
+```text
+Recommended provider: WorkBuddy
+Recommended model: HY3
+Recommended reasoning: Medium
+Action: switch manually if the current host requires it
+```
 
 The default WorkBuddy catalog in `references/provider-profiles.json` includes Auto, HY3, GLM-5.3, GLM-5.2, GLM-5.1, GLM-5V-Turbo, MiniMax-M3, Kimi-K3, Kimi-K2.7-Code, Kimi-K2.6, Deepseek-V4-Flash, and Deepseek-V4-Pro. The tier/cost-class values are editable heuristics, not benchmark claims, and no unresolved multiplier values are hard-coded.
 
