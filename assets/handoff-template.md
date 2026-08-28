@@ -13,7 +13,8 @@
 ## Preflight
 
 - Current model: `<provider/model/tier>`
-- Result: `<PASS | BLOCK>`
+- Status: `<PASS | BLOCK | UNVERIFIED>`
+- Execution allowed: `<yes | no>`
 - Reason: `<short explanation>`
 
 ## Current state

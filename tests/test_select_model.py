@@ -19,6 +19,12 @@ class SelectModelTests(unittest.TestCase):
         result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "architecture_settled": True, "provider_availability": ["codex"]})
         self.assertEqual(result["recommended_model_tier"], "general")
 
+    def test_known_suitable_model_passes(self):
+        result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "current_model": {"provider": "codex", "tier": "general"}, "current_reasoning_effort": "medium", "provider_availability": ["codex"]})
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["preflight"]["status"], "PASS")
+        self.assertTrue(result["execution_allowed"])
+
     def test_architecture_and_bugfix_use_strong(self):
         for task_type in ("architecture", "bugfix"):
             result = select_model.select({"task_complexity": "moderate", "task_type": task_type, "provider_availability": ["codex"]})
@@ -41,10 +47,35 @@ class SelectModelTests(unittest.TestCase):
     def test_one_tier_reasoning_difference_does_not_block(self):
         result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "current_model": {"provider": "codex", "tier": "strong"}, "current_reasoning_effort": "high", "provider_availability": ["codex"]})
         self.assertFalse(result["block_current_execution"])
+        self.assertEqual(result["status"], "PASS")
+
+    def test_unknown_model_does_not_block_execution(self):
+        result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "current_model": {"provider": "codex", "model": "unknown"}, "provider_availability": ["codex"]})
+        self.assertFalse(result["block_current_execution"])
+        self.assertEqual(result["status"], "UNVERIFIED")
+        self.assertTrue(result["execution_allowed"])
+        self.assertIn("does not expose", result["preflight"]["reason"])
+
+    def test_missing_model_metadata_does_not_block_execution(self):
+        result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "provider_availability": ["codex"]})
+        self.assertFalse(result["block_current_execution"])
+        self.assertEqual(result["preflight"]["status"], "UNVERIFIED")
+        self.assertTrue(result["preflight"]["execution_allowed"])
+
+    def test_unknown_reasoning_does_not_block(self):
+        result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "current_model": {"provider": "codex", "tier": "general"}, "provider_availability": ["codex"]})
+        self.assertFalse(result["block_current_execution"])
+        self.assertEqual(result["status"], "UNVERIFIED")
 
     def test_quota_falls_back_to_workbuddy(self):
         result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "preferred_provider": "codex", "quota_unavailable": True, "quota_provider": "codex", "provider_availability": ["codex", "workbuddy"]})
         self.assertEqual(result["recommended_provider"], "workbuddy")
+
+    def test_quota_fallback_with_unknown_model_does_not_block(self):
+        result = select_model.select({"task_complexity": "moderate", "task_type": "implementation", "preferred_provider": "codex", "quota_unavailable": True, "quota_provider": "codex", "provider_availability": ["codex", "workbuddy"]})
+        self.assertEqual(result["recommended_provider"], "workbuddy")
+        self.assertEqual(result["status"], "UNVERIFIED")
+        self.assertFalse(result["block_current_execution"])
 
     def test_preferred_workbuddy_wins(self):
         result = select_model.select({"task_complexity": "simple", "preferred_provider": "workbuddy", "provider_availability": ["codex", "workbuddy"]})

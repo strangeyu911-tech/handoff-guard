@@ -54,7 +54,9 @@ For deterministic routing:
 python scripts/select_model.py --input '{"task_complexity":"moderate","task_type":"implementation","architecture_settled":true,"provider_availability":["codex","workbuddy"]}'
 ```
 
-For preflight, include `current_model` in the input. The result contains `block_current_execution`; a true result means the receiving agent should stop and ask the user to switch.
+For preflight, include `current_model` and `current_reasoning_effort` when the host exposes them. The result contains an explicit `status`: `PASS`, `BLOCK`, or `UNVERIFIED`, plus `block_current_execution`. Only a material mismatch or declared quota constraint blocks execution.
+
+If the host cannot reliably expose the active model, Handoff Guard treats the configuration as unverified rather than mismatched. It shows the recommendation and allows execution to continue. Unknown is advisory, not blocking; the user can verify the model picker manually if needed.
 
 For validation:
 

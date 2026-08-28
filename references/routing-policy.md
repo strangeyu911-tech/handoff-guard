@@ -21,7 +21,7 @@ Handoff Guard uses an explainable heuristic rather than online pricing, benchmar
 }
 ```
 
-Only `task_complexity` is required. Missing availability means every provider in the profile is considered available. `current_model` is optional; without it, routing is returned but no model-mismatch block is possible.
+Only `task_complexity` is required. Missing availability means every provider in the profile is considered available. `current_model` is optional; without it, routing is returned with `UNVERIFIED` status and execution remains allowed.
 
 ## Tier heuristic
 
@@ -41,6 +41,8 @@ Cost sensitivity can move a moderate task to `budget` when the provider has one.
 
 ## Preflight
 
-The selected task tier and current model tier are compared on the ordinal `budget < general < strong`; `vision` is compatible with `general` for non-vision work. Block only when the current model is at least two tiers away from the required tier, or when the current provider is unavailable due to a declared quota constraint. A one-tier difference is acceptable and reported as an advisory. Reasoning effort differences, especially Medium vs High, do not by themselves block.
+The selected task tier and current model tier are compared on the ordinal `budget < general < strong`; `vision` is compatible with `general` for non-vision work. The preflight state machine is explicit: known and suitable is `PASS`, known and materially mismatched is `BLOCK`, and unknown/unavailable model or reasoning metadata is `UNVERIFIED`. Block only when the current model is at least two tiers away from the required tier, or when the current provider is unavailable due to a declared quota constraint. A one-tier difference is acceptable and reported as an advisory. Reasoning effort differences, especially Medium vs High, do not by themselves block.
+
+Unknown is advisory, not blocking. If the host cannot reliably expose the active model, Handoff Guard shows the recommendation, asks the user to verify it manually if needed, and allows execution to continue.
 
 The output always includes `block_current_execution`, a recommended provider/model, a reasoning effort, and a short reason suitable for showing to the user.

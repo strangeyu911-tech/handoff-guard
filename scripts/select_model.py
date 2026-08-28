@@ -13,6 +13,7 @@ from typing import Any
 TIERS = ("budget", "general", "strong")
 TIER_RANK = {name: index for index, name in enumerate(TIERS)}
 EFFORT_FOR_TIER = {"budget": "low", "general": "medium", "strong": "high", "vision": "high"}
+KNOWN_REASONING_EFFORTS = {"low", "medium", "high"}
 DEFAULT_PROFILE = Path(__file__).resolve().parents[1] / "references" / "provider-profiles.json"
 
 
@@ -145,7 +146,11 @@ def select(task: dict[str, Any], profiles: dict[str, Any] | None = None) -> dict
     provider, model, provider_reason = choose_provider(profiles, available, desired_tier, task)
     current_tier, current_provider = model_tier(profiles, task.get("current_model"))
     block = False
-    preflight_reason = "No current model was provided; routing recommendation is ready for preflight."
+    preflight_status = "UNVERIFIED"
+    preflight_reason = (
+        "The host does not expose the active model reliably. "
+        "Please verify the model manually if needed. Execution may continue."
+    )
     if current_tier:
         current_rank = TIER_RANK.get(current_tier)
         desired_rank = TIER_RANK.get(desired_tier)
@@ -157,17 +162,29 @@ def select(task: dict[str, Any], profiles: dict[str, Any] | None = None) -> dict
         quota_provider = canonical_provider(profiles, task.get("quota_provider")) or ("codex" if task.get("quota_unavailable") else None)
         if task.get("quota_unavailable") and current_provider == quota_provider:
             block = True
+            preflight_status = "BLOCK"
             preflight_reason = f"Current provider {current_provider} is unavailable under the declared quota constraint."
         elif distance >= 2:
             block = True
+            preflight_status = "BLOCK"
             preflight_reason = f"Current tier {current_tier} is clearly stronger than required tier {desired_tier}; switch down before execution."
         elif distance <= -2:
             block = True
+            preflight_status = "BLOCK"
             preflight_reason = f"Current tier {current_tier} is clearly weaker than required tier {desired_tier}; switch up before execution."
-        elif distance:
-            preflight_reason = f"Current tier {current_tier} differs by one tier from required tier {desired_tier}; proceed unless quality signals disagree."
         else:
-            preflight_reason = "Current model tier is aligned with the required tier."
+            current_effort = str(task.get("current_reasoning_effort", "")).lower()
+            if current_effort not in KNOWN_REASONING_EFFORTS:
+                preflight_reason = (
+                    f"Current model tier {current_tier} is suitable, but the host does not expose reasoning effort reliably. "
+                    "Please verify it manually if needed. Execution may continue."
+                )
+            elif distance:
+                preflight_status = "PASS"
+                preflight_reason = f"Current tier {current_tier} differs by one tier from required tier {desired_tier}; proceed unless quality signals disagree."
+            else:
+                preflight_status = "PASS"
+                preflight_reason = "Current model tier is aligned with the required tier."
     return {
         "recommended_provider": provider,
         "recommended_model": model.get("name"),
@@ -176,10 +193,14 @@ def select(task: dict[str, Any], profiles: dict[str, Any] | None = None) -> dict
         "required_task_tier": desired_tier,
         "available_providers": available,
         "reason": f"{tier_reason} {provider_reason}",
+        "status": preflight_status,
+        "execution_allowed": not block,
         "preflight": {
             "current_model": task.get("current_model"),
             "current_reasoning_effort": task.get("current_reasoning_effort"),
+            "status": preflight_status,
             "block_current_execution": block,
+            "execution_allowed": not block,
             "reason": preflight_reason,
         },
         "block_current_execution": block,
