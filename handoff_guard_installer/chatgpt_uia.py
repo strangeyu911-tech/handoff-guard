@@ -24,7 +24,7 @@ CUSTOM_INSTRUCTION_NAMES = (
 SAVE_NAMES = ("Save", "Done", "保存", "完成")
 LOGGER = logging.getLogger("handoff_guard.uia")
 UIA_TREE_MAX_NODES = 300
-UIA_TREE_MAX_DEPTH = 10
+UIA_TREE_MAX_DEPTH = 16
 UIA_SENSITIVE_CONTROL_TYPES = {"Edit", "Document"}
 
 
@@ -121,6 +121,8 @@ def _log_uia_tree(root: Any) -> None:
     """Log a bounded, content-safe UIA tree snapshot for selector diagnosis."""
     _configure_logging()
     count = 0
+    depth_capped = 0
+    depth_capped_paths: list[str] = []
     stack: list[tuple[Any, int, str]] = [(root, 0, "0")]
     while stack and count < UIA_TREE_MAX_NODES:
         control, depth, path = stack.pop()
@@ -130,6 +132,9 @@ def _log_uia_tree(root: Any) -> None:
             LOGGER.info("stage=uia_tree_node depth=%d path=%s metadata_error=%s", depth, path, type(exc).__name__)
         count += 1
         if depth >= UIA_TREE_MAX_DEPTH:
+            depth_capped += 1
+            if len(depth_capped_paths) < 16:
+                depth_capped_paths.append(path)
             continue
         try:
             children = list(control.children())
@@ -146,8 +151,21 @@ def _log_uia_tree(root: Any) -> None:
             UIA_TREE_MAX_DEPTH,
             len(stack),
         )
-    else:
-        LOGGER.info("stage=uia_tree_complete nodes=%d max_nodes=%d max_depth=%d", count, UIA_TREE_MAX_NODES, UIA_TREE_MAX_DEPTH)
+    if depth_capped:
+        LOGGER.info(
+            "stage=uia_tree_depth_capped nodes=%d max_depth=%d paths=%s",
+            depth_capped,
+            UIA_TREE_MAX_DEPTH,
+            depth_capped_paths,
+        )
+    if not stack:
+        LOGGER.info(
+            "stage=uia_tree_complete nodes=%d max_nodes=%d max_depth=%d depth_capped=%d",
+            count,
+            UIA_TREE_MAX_NODES,
+            UIA_TREE_MAX_DEPTH,
+            depth_capped,
+        )
 
 
 def _log_control(stage: str, control: Any, message: str) -> None:
@@ -263,7 +281,16 @@ class ChatGPTUIAAdapter:
         return matches
 
     def _click_first(self, root: Any, names: Iterable[str]) -> bool:
-        for control in self._find_named(root, names, ("Button", "TabItem", "MenuItem", "Text")):
+        wanted = tuple(names)
+        controls = self._find_named(root, wanted, ("Button", "TabItem", "MenuItem", "Text"))
+        _configure_logging()
+        LOGGER.info(
+            "stage=named_control_search names=%r control_types=%r matches=%d action=click",
+            wanted,
+            ("Button", "TabItem", "MenuItem", "Text"),
+            len(controls),
+        )
+        for control in controls:
             try:
                 control.click_input()
                 return True
@@ -322,6 +349,13 @@ class ChatGPTUIAAdapter:
     def _locate_editor(self, root: Any | None = None):
         root = root or self._window()
         named_edits = self._find_named(root, CUSTOM_INSTRUCTION_NAMES, ("Edit", "Document"))
+        _configure_logging()
+        LOGGER.info(
+            "stage=named_control_search names=%r control_types=%r matches=%d action=locate_editor",
+            CUSTOM_INSTRUCTION_NAMES,
+            ("Edit", "Document"),
+            len(named_edits),
+        )
         if len(named_edits) == 1:
             _log_control("custom_instructions_control_found", named_edits[0], "named_editor")
             return named_edits[0]
@@ -380,19 +414,32 @@ def open_chatgpt_or_personalization() -> str:
     """Open ChatGPT without showing a Windows unregistered-protocol dialog."""
     guidance = "Open Settings → Personalization → Custom Instructions."
     if os.name == "nt":
-        if _protocol_is_registered("chatgpt"):
+        protocol_registered = _protocol_is_registered("chatgpt")
+        _configure_logging()
+        LOGGER.info("stage=desktop_deep_link_check protocol=chatgpt registered=%s", protocol_registered)
+        if protocol_registered:
             try:
                 os.startfile("chatgpt://settings/personalization")
+                LOGGER.info("stage=desktop_deep_link_launched target=chatgpt://settings/personalization")
                 return "ChatGPT Settings was opened. " + guidance
             except OSError:
-                pass
+                LOGGER.info("stage=desktop_deep_link_failed target=chatgpt://settings/personalization")
         if _launch_discovered_chatgpt():
+            LOGGER.info("stage=desktop_shortcut_launched")
             return "ChatGPT was opened. " + guidance
+        LOGGER.info("stage=desktop_shortcut_not_found")
     try:
-        if webbrowser.open("https://chatgpt.com/"):
+        opened = webbrowser.open("https://chatgpt.com/")
+        _configure_logging()
+        LOGGER.info(
+            "stage=web_fallback_%s target=https://chatgpt.com/",
+            "launched" if opened else "failed",
+        )
+        if opened:
             return "ChatGPT web was opened. " + guidance
     except Exception:
-        pass
+        _configure_logging()
+        LOGGER.info("stage=web_fallback_failed target=https://chatgpt.com/")
     return "Open ChatGPT manually, then " + guidance
 
 

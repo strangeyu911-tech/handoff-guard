@@ -42,6 +42,20 @@ class UIADiagnosticTreeTests(unittest.TestCase):
         self.assertIn("stage=uia_tree_children", messages)
         self.assertNotIn("child lookup failed", messages)
 
+    def test_tree_snapshot_reports_depth_cap(self):
+        root = FakeControl()
+        with patch.object(chatgpt_uia, "UIA_TREE_MAX_DEPTH", 0):
+            with patch.object(chatgpt_uia.LOGGER, "info") as info:
+                chatgpt_uia._log_uia_tree(root)
+        messages = " ".join(str(call) for call in info.call_args_list)
+        self.assertIn("stage=uia_tree_depth_capped", messages)
+        complete = [
+            call
+            for call in info.call_args_list
+            if call.args and str(call.args[0]).startswith("stage=uia_tree_complete")
+        ]
+        self.assertEqual(complete[0].args[-1], 1)
+
     def test_sensitive_editor_name_is_redacted(self):
         self.assertEqual(
             chatgpt_uia._safe_tree_name(None, "Edit", "existing user instructions"),
