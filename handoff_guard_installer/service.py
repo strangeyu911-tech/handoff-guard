@@ -4,15 +4,8 @@ import difflib
 import secrets
 from dataclasses import dataclass
 
-from .adapters import SettingsAdapter
 from .backup import BackupRecord, LocalBackupStore
-from .errors import (
-    ConfirmationRequiredError,
-    RepairRequiredError,
-    SettingsUnavailableError,
-    UnsafeReadError,
-    VerificationError,
-)
+from .errors import ConfirmationRequiredError, RepairRequiredError
 from .managed_block import (
     MANAGED_VERSION,
     canonical_payload,
@@ -36,25 +29,21 @@ class ChangePlan:
 @dataclass(frozen=True)
 class ApplyResult:
     action: str
+    output: str
     backup: BackupRecord | None
-    verified: bool
+    validated: bool
 
 
 class InstallerService:
-    def __init__(self, adapter: SettingsAdapter, backups: LocalBackupStore | None = None):
-        self.adapter = adapter
-        self.backups = backups or LocalBackupStore()
+    """Generate and validate local text changes for a guided install.
 
-    def _read(self) -> str:
-        if not self.adapter.is_chatgpt_available():
-            raise SettingsUnavailableError("ChatGPT Desktop was not found")
-        self.adapter.open_personalization()
-        current = self.adapter.read_custom_instructions()
-        if current is None:
-            raise UnsafeReadError(
-                "Existing Custom Instructions could not be read. Nothing was changed; use Copy & Open Settings."
-            )
-        return current
+    This service deliberately has no ChatGPT or desktop adapter. The caller
+    supplies any existing text, and the returned result is only a local value
+    that the user may copy and save in ChatGPT themselves.
+    """
+
+    def __init__(self, backups: LocalBackupStore | None = None):
+        self.backups = backups or LocalBackupStore()
 
     @staticmethod
     def _preview(before: str, after: str) -> str:
@@ -67,9 +56,11 @@ class InstallerService:
             )
         ) or "No changes required."
 
-    def prepare(self, operation: str) -> ChangePlan:
-        before = self._read()
-        if operation == "install":
+    def prepare(self, operation: str, current: str = "") -> ChangePlan:
+        if not isinstance(current, str):
+            raise TypeError("current Custom Instructions must be text")
+        before = current
+        if operation in {"install", "update"}:
             after, action = install_or_update(before, canonical_payload(), MANAGED_VERSION)
         elif operation == "uninstall":
             after, action = uninstall(before)
@@ -91,20 +82,23 @@ class InstallerService:
             preview=self._preview(before, after),
         )
 
-    def apply(self, plan: ChangePlan, confirmation_token: str) -> ApplyResult:
+    def apply(
+        self,
+        plan: ChangePlan,
+        confirmation_token: str,
+        *,
+        save_local_backup: bool = False,
+    ) -> ApplyResult:
+        """Confirm a local transformation; never writes to ChatGPT.
+
+        A backup is opt-in and only contains text explicitly supplied by the
+        user to this service.
+        """
         if not secrets.compare_digest(plan.token, confirmation_token):
-            raise ConfirmationRequiredError("Confirm the displayed preview before applying changes")
-        if plan.action == "noop":
-            return ApplyResult(action="noop", backup=None, verified=True)
-        current = self.adapter.read_custom_instructions()
-        if current is None or current != plan.before:
-            raise VerificationError("Custom Instructions changed after preview; refresh before installing")
-        backup = self.backups.save(plan.before, plan.action)
-        try:
-            self.adapter.write_custom_instructions(plan.after)
-        except Exception as exc:
-            raise VerificationError(f"Write failed. Restore from backup: {backup.path}") from exc
-        saved = self.adapter.read_custom_instructions()
-        if saved != plan.after:
-            raise VerificationError(f"Save verification failed. Restore from backup: {backup.path}")
-        return ApplyResult(action=plan.action, backup=backup, verified=True)
+            raise ConfirmationRequiredError("Confirm the displayed local preview before copying")
+        backup = self.backups.save(plan.before, plan.action) if save_local_backup else None
+        return ApplyResult(action=plan.action, output=plan.after, backup=backup, validated=True)
+
+    def backup_text(self, text: str, operation: str = "user-provided") -> BackupRecord:
+        """Back up text the user explicitly supplied to the local installer."""
+        return self.backups.save(text, operation)

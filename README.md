@@ -10,7 +10,7 @@ Handoff Guard helps a Chat conversation decide when planning is ready to move in
 Chat / Architect → structured handoff → execution preflight → Work
 ```
 
-It is more than a static prompt. The repository contains a deterministic model selector, a versioned handoff contract, a validator, regression fixtures, execution-boundary rules, and managed installation lifecycle. Custom Instructions are one lightweight runtime adapter used to activate those behaviors in ChatGPT—not the product's entire architecture.
+It is more than a static prompt. The repository contains a deterministic model selector, a versioned handoff contract, a validator, regression fixtures, and execution-boundary rules. Custom Instructions are one lightweight runtime adapter used to activate those behaviors in ChatGPT—not the product's entire architecture.
 
 ## What it does
 
@@ -19,11 +19,11 @@ It is more than a static prompt. The repository contains a deterministic model s
 - **Recommends an appropriate model:** separates workload size from independent decision risk so large settled work does not automatically consume the strongest model.
 - **Checks before execution:** returns `PASS`, `BLOCK`, or `UNVERIFIED` before a receiving agent starts changing files.
 - **Keeps behavior testable:** validates handoff structure and runs routing policy against regression fixtures.
-- **Manages its ChatGPT adapter safely:** supports preview, install, update, repair, local backup, uninstall, and manual fallback on Windows.
+- **Guides installation safely:** generates, validates, and copies a managed block for the user to save manually in ChatGPT on Windows.
 
 ## Installation
 
-### Windows — one-click installer
+### Windows — Guided Install
 
 The primary distribution artifact is:
 
@@ -31,17 +31,22 @@ The primary distribution artifact is:
 HandoffGuard-Installer-v0.1.0.exe
 ```
 
-Download it from the repository's [GitHub Releases](https://github.com/strangeyu911-tech/handoff-guard/releases), open ChatGPT Desktop, and run the installer. The installer shows the full proposed change before enabling confirmation. After confirmation it preserves existing instructions, creates a local backup, writes the versioned Handoff Guard managed block, and reads the value back to verify the result.
+Download it from the repository's [GitHub Releases](https://github.com/strangeyu911-tech/handoff-guard/releases) and run the installer. It generates the versioned Handoff Guard managed block, copies it to the clipboard, and opens [ChatGPT Web](https://chatgpt.com/). The final paste and save are always performed by you in `Settings → Personalization → Custom Instructions`.
+
+The installer does not read, write, save, verify, back up, repair, or uninstall ChatGPT account settings. It has no supported Custom Instructions API or settings deep link to use. Its local update/removal helpers operate only on text you explicitly paste into the installer.
+It does not use guessed `chatgpt://` links; **Open ChatGPT Web** opens only the public web URL.
+
+Status example: `Handoff Guard block copied. No ChatGPT account setting was changed.`
 
 If a release artifact is not published yet, see [Windows installer build and acceptance](docs/windows-installer.md) to build it from source.
 
-The installer is transparent about using ChatGPT Custom Instructions. That setting is the current ChatGPT runtime adapter; Core policy, routing, schema, validation, and lifecycle remain separate product layers.
+The installer is transparent about using ChatGPT Custom Instructions. That setting is the runtime adapter; Core policy, routing, schema, and validation remain separate product layers.
 
 ### Manual installation
 
-If UI Automation cannot uniquely read the current editor, the installer refuses to write and offers **Copy & Open Settings**. You can also open [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md), copy its generated managed payload, and paste it alongside—not over—your existing Custom Instructions.
+You can also open [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md), copy its generated managed payload, and paste it alongside—not over—your existing Custom Instructions.
 
-Manual installation activates the runtime rules, but does not provide managed update, repair, backup, or uninstall behavior.
+Manual installation activates the runtime rules. Keep the managed block intact so the local Generate, Update, and Removal instructions remain easy to follow.
 
 ### Skill adapter (advanced)
 
@@ -65,18 +70,17 @@ Handoff Guard
 ├─ Runtime adapters
 │  ├─ Windows Installer / Custom Instructions
 │  └─ Skill adapter
-└─ Product lifecycle
-   ├─ install and update
-   ├─ preview and local backup
-   ├─ repair and verification
-   └─ uninstall and manual fallback
+└─ Guided install lifecycle
+   ├─ generate and copy
+   ├─ local update/removal transformation
+   └─ manual save in ChatGPT
 ```
 
 `runtime/custom-instructions.txt` is the canonical ChatGPT runtime template. Both the Windows installer and the generated `CUSTOM-INSTRUCTIONS.md` consume that file, and tests enforce parity with the Core routing dimensions. This prevents the installer from acquiring a second, handwritten policy.
 
-## Safe managed installation
+## Guided managed-block installation
 
-The Windows adapter uses Microsoft UI Automation through accessible names rather than absolute screen coordinates. Its managed region is versioned and checksummed:
+The Windows installer does not use UI Automation, desktop selectors, coordinates, OCR, private endpoints, tokens, or cookies. Its managed region is versioned and checksummed:
 
 ```text
 [HANDOFF-GUARD:BEGIN version=0.1.0 sha256=...]
@@ -84,14 +88,17 @@ The Windows adapter uses Microsoft UI Automation through accessible names rather
 [HANDOFF-GUARD:END]
 ```
 
-- **Install:** appends the block without replacing unrelated instructions.
-- **Update:** replaces one valid older block in place.
-- **Uninstall:** removes only the valid managed region.
-- **Repair:** detects truncation, duplication, malformed markers, and checksum mismatch, then requires a new preview and confirmation.
-- **Backup:** stores the original value under `%LOCALAPPDATA%\HandoffGuard\backups\` before every write.
-- **Verification:** reads the saved value back and reports the backup path if verification fails.
+- **Generate:** creates the canonical block locally.
+- **Copy:** puts only the generated block or local result on the clipboard.
+- **Install:** guides the user through pasting the copied block and saving it manually.
+- **Update:** replaces one valid older block in text supplied by the user and preserves text outside it.
+- **Uninstall:** generates removal instructions; the user deletes the managed block and saves manually.
+- **Removal:** generates text with only the Handoff Guard block removed.
+- **Repair:** regenerates a canonical block after a damaged managed region is supplied locally.
+- **Backup:** is available only for text the user explicitly supplies locally.
+- **Verification:** locally checks payload, version, marker format, and checksum; it cannot verify a ChatGPT paste, save, or sync.
 
-Custom Instructions are not uploaded. The installer does not read chat history, request OpenAI credentials, inspect account tokens, or modify ChatGPT's local database. See [SECURITY.md](SECURITY.md).
+The installer does not send Custom Instructions to its own servers or third parties and does not access ChatGPT credentials. When you manually save the generated block in ChatGPT, that content is handled and synchronized according to [OpenAI's ChatGPT data practices](https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/). See [SECURITY.md](SECURITY.md).
 
 ## Handoff and preflight contract
 
@@ -150,7 +157,7 @@ Run the complete test suite:
 python -m unittest discover -s tests -v
 ```
 
-The automated suite covers selector regressions, handoff validation, emission boundaries, runtime-template parity, managed-block lifecycle, backup, confirmation, verification failure, repair, and fallback behavior. It does not prove that a current ChatGPT Desktop release exposes the required UI Automation controls; that remains a real-device release check documented in [docs/windows-installer.md](docs/windows-installer.md).
+The automated suite covers selector regressions, handoff validation, emission boundaries, runtime-template parity, managed-block lifecycle, local transformation, local backup, confirmation, repair, and Guided Install behavior. It does not verify that ChatGPT has received or saved anything; final account changes are deliberately outside the installer.
 
 ## Repository structure
 

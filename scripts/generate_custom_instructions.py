@@ -13,7 +13,7 @@ TARGET = ROOT / "CUSTOM-INSTRUCTIONS.md"
 def render(payload: str) -> str:
     return f"""# Handoff Guard — Manual ChatGPT installation
 
-This is a generated manual-installation artifact for the ChatGPT runtime adapter. Handoff Guard Core—not this document—is the product's canonical behavior layer. The Windows installer and this page both consume `runtime/custom-instructions.txt`, so there is no separate installer policy.
+This is a generated manual-installation artifact for the ChatGPT runtime adapter. Handoff Guard Core—not this document—is the product's canonical behavior layer. The Windows Guided Install executable and this page both consume `runtime/custom-instructions.txt`, so there is no separate installer policy.
 
 Paste only the following block into ChatGPT Settings → Personalization → Custom Instructions. Preserve any unrelated instructions already present.
 
@@ -21,7 +21,7 @@ Paste only the following block into ChatGPT Settings → Personalization → Cus
 {payload.strip()}
 ```
 
-The runtime adapter is advisory: it cannot switch models, inspect provider APIs, or execute repository scripts. Use the Windows installer for managed install, update, repair, backup, and uninstall behavior.
+The runtime adapter is advisory: it cannot switch models, inspect provider APIs, or execute repository scripts. Use the Windows Guided Install executable to generate and copy local managed-block text, then manually paste and save it in ChatGPT. The executable does not modify, verify, back up, repair, or uninstall ChatGPT account settings.
 """
 
 

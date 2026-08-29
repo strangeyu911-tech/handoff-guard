@@ -13,7 +13,7 @@ authors = [{ name = "Handoff Guard contributors" }]
 keywords = ["coding-agents", "handoff", "model-routing", "preflight"]
 
 [project.optional-dependencies]
-windows-installer = ["pywinauto>=0.6.9,<0.7", "pyinstaller>=6.0,<7"]
+windows-installer = ["pyinstaller>=6.0,<7"]
 
 [tool.setuptools.packages.find]
 include = ["handoff_guard_installer*"]

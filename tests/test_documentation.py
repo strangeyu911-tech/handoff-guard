@@ -29,7 +29,7 @@ class DocumentationTests(unittest.TestCase):
         for text in (english, chinese):
             self.assertIn("CUSTOM-INSTRUCTIONS.md", text)
             self.assertIn("Runtime adapters", text)
-            self.assertIn("Product lifecycle", text)
+            self.assertIn("lifecycle", text.lower())
             self.assertIn("HandoffGuard-Installer-v0.1.0.exe", text)
         self.assertIn("It is more than a static prompt", english)
         self.assertIn("Custom Instructions are one lightweight runtime adapter", english)
@@ -43,8 +43,31 @@ class DocumentationTests(unittest.TestCase):
             self.assertIn(phrase, english)
         for phrase in ("安装", "升级", "卸载", "修复", "备份", "验证"):
             self.assertIn(phrase, chinese)
-        self.assertIn("does not read chat history", english)
-        self.assertIn("不读取聊天记录", chinese)
+        self.assertIn("does not read, write, save, verify", english.lower())
+        self.assertIn("不会读取、写入、保存、验证", chinese)
+        self.assertIn("No ChatGPT account setting was changed", english)
+        self.assertIn("账户设置尚未发生任何变化", chinese)
+
+    def test_guided_install_boundaries_are_documented(self):
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+        windows = (ROOT / "docs" / "windows-installer.md").read_text(encoding="utf-8")
+        security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        for text in (english, windows, security):
+            self.assertIn("https://chatgpt.com/", text)
+            self.assertIn("cannot verify", text.lower())
+            self.assertIn("chatgpt://", text.lower())
+        self.assertIn("没有公开的 Custom Instructions API", chinese)
+        self.assertIn("手动保存", chinese)
+
+    def test_production_has_no_uia_or_deep_link_imports(self):
+        app = (ROOT / "handoff_guard_installer" / "app_win32.py").read_text(encoding="utf-8")
+        service = (ROOT / "handoff_guard_installer" / "service.py").read_text(encoding="utf-8")
+        installer = (ROOT / "installer.py").read_text(encoding="utf-8")
+        for text in (app, service, installer):
+            self.assertNotIn("chatgpt://", text)
+            self.assertNotIn("UIA", text)
+            self.assertNotIn("pywinauto", text)
 
     def test_emission_gate_is_present_in_both_skills_and_readmes(self):
         root_skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")

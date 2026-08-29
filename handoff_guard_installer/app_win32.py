@@ -4,9 +4,9 @@ import ctypes
 import os
 from ctypes import wintypes
 
-from .chatgpt_uia import ChatGPTUIAAdapter, open_chatgpt_or_personalization
 from .errors import InstallerError
-from .fallback import ManualFallback
+from .fallback import open_chatgpt_web
+from .managed_block import render_managed_block
 from .service import ChangePlan, InstallerService
 
 
@@ -37,6 +37,10 @@ if os.name == "nt":
     user32.CreateWindowExW.restype = wintypes.HWND
     user32.SetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
     user32.SetWindowTextW.restype = wintypes.BOOL
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
     user32.EnableWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
     user32.EnableWindow.restype = wintypes.BOOL
     user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
@@ -96,11 +100,13 @@ GMEM_MOVEABLE = 0x0002
 COLOR_WINDOW = 5
 DEFAULT_GUI_FONT = 17
 
-ID_INSTALL = 101
-ID_REPAIR = 102
-ID_UNINSTALL = 103
-ID_FALLBACK = 104
-ID_CONFIRM = 105
+ID_GENERATE = 101
+ID_UPDATE = 102
+ID_REMOVE = 103
+ID_REPAIR = 104
+ID_COPY_BLOCK = 105
+ID_OPEN_WEB = 106
+ID_CONFIRM = 107
 
 
 LRESULT = ctypes.c_ssize_t
@@ -177,9 +183,10 @@ class InstallerWindow:
     CLASS_NAME = "HandoffGuardInstallerWindow"
 
     def __init__(self):
-        self.service = InstallerService(ChatGPTUIAAdapter())
+        self.service = InstallerService()
         self.pending: ChangePlan | None = None
         self.hwnd = None
+        self.source = None
         self.preview = None
         self.status = None
         self.confirm = None
@@ -211,9 +218,16 @@ class InstallerWindow:
     def _set_preview(self, text: str) -> None:
         user32.SetWindowTextW(self.preview, text.replace("\n", "\r\n"))
 
+    @staticmethod
+    def _get_text(control) -> str:
+        length = user32.GetWindowTextLengthW(control)
+        buffer = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(control, buffer, length + 1)
+        return buffer.value
+
     def _prepare(self, operation: str) -> None:
         try:
-            self.pending = self.service.prepare(operation)
+            self.pending = self.service.prepare(operation, self._get_text(self.source))
         except InstallerError as exc:
             self.pending = None
             user32.EnableWindow(self.confirm, False)
@@ -223,11 +237,29 @@ class InstallerWindow:
         self._set_preview(self.pending.preview)
         if self.pending.action == "noop":
             user32.EnableWindow(self.confirm, False)
-            self._set_status("Handoff Guard is already up to date; no change is required.")
+            self._set_status("The supplied text already contains the current Handoff Guard block.")
         else:
-            user32.SetWindowTextW(self.confirm, f"Confirm {self.pending.action}")
+            user32.SetWindowTextW(self.confirm, "Copy generated instructions")
             user32.EnableWindow(self.confirm, True)
-            self._set_status("Review the complete preview. Nothing changes until you confirm.")
+            self._set_status("Review the local preview. ChatGPT will not be changed by this installer.")
+
+    def _generate(self) -> None:
+        self._set_preview(render_managed_block())
+        self.pending = None
+        user32.EnableWindow(self.confirm, False)
+        self._set_status("Managed block generated locally. Use Copy managed block, then save it in ChatGPT yourself.")
+
+    def _copy_block(self) -> None:
+        try:
+            _copy_to_clipboard(render_managed_block())
+        except Exception as exc:
+            _message(self.hwnd, "Handoff Guard", str(exc), MB_OK | MB_ICONERROR)
+            return
+        self._set_preview(render_managed_block())
+        self._set_status("Handoff Guard block copied. No ChatGPT account setting was changed.")
+
+    def _open_web(self) -> None:
+        self._set_status(open_chatgpt_web())
 
     def _apply(self) -> None:
         if self.pending is None:
@@ -238,40 +270,41 @@ class InstallerWindow:
             self._set_status(str(exc))
             _message(self.hwnd, "Handoff Guard", str(exc), MB_OK | MB_ICONERROR)
             return
-        backup = f"\n\nBackup: {result.backup.path}" if result.backup else ""
-        self._set_status(f"{result.action.title()} completed and verified.")
+        try:
+            _copy_to_clipboard(result.output)
+        except Exception as exc:
+            self._set_status(str(exc))
+            _message(self.hwnd, "Handoff Guard", str(exc), MB_OK | MB_ICONERROR)
+            return
+        self._set_preview(result.output)
+        self._set_status(
+            "Generated instructions copied. No ChatGPT account setting was changed; manually review and save them."
+        )
         user32.EnableWindow(self.confirm, False)
         _message(
             self.hwnd,
             "Handoff Guard",
-            f"The change was saved and verified.{backup}",
+            "The local instructions were generated and copied.\n\n"
+            "Now open ChatGPT Web, go to Settings → Personalization → Custom Instructions, "
+            "preserve unrelated content, and save manually.",
             MB_OK | MB_ICONINFORMATION,
-        )
-
-    def _fallback(self) -> None:
-        try:
-            block = ManualFallback(_copy_to_clipboard, lambda: None).copy_and_open()
-        except Exception as exc:
-            _message(self.hwnd, "Handoff Guard", str(exc), MB_OK | MB_ICONERROR)
-            return
-        guidance = open_chatgpt_or_personalization()
-        self._set_preview(block)
-        self._set_status(
-            "Managed block copied. Paste it beside existing instructions; do not replace unrelated text. "
-            + guidance
         )
 
     def _window_proc(self, hwnd, message, wparam, lparam):
         if message == WM_COMMAND:
             control_id = int(wparam) & 0xFFFF
-            if control_id == ID_INSTALL:
-                self._prepare("install")
+            if control_id == ID_GENERATE:
+                self._generate()
+            elif control_id == ID_UPDATE:
+                self._prepare("update")
+            elif control_id == ID_REMOVE:
+                self._prepare("uninstall")
             elif control_id == ID_REPAIR:
                 self._prepare("repair")
-            elif control_id == ID_UNINSTALL:
-                self._prepare("uninstall")
-            elif control_id == ID_FALLBACK:
-                self._fallback()
+            elif control_id == ID_COPY_BLOCK:
+                self._copy_block()
+            elif control_id == ID_OPEN_WEB:
+                self._open_web()
             elif control_id == ID_CONFIRM:
                 self._apply()
             return 0
@@ -299,7 +332,7 @@ class InstallerWindow:
             120,
             80,
             900,
-            700,
+            820,
             None,
             None,
             instance,
@@ -308,9 +341,8 @@ class InstallerWindow:
         self._create_control("STATIC", "Handoff Guard", WS_CHILD | WS_VISIBLE, 22, 18, 830, 28, self.hwnd)
         self._create_control(
             "STATIC",
-            "Model-aware Chat → Work handoffs, routing recommendations, and execution preflight.\n"
-            "This installer manages a versioned Custom Instructions block. Existing content is preserved; "
-            "nothing is uploaded, and nothing changes before preview confirmation.",
+            "Guided Install for the Handoff Guard managed block.\n"
+            "This installer only generates, validates, and copies local text. It never reads or changes your ChatGPT account.",
             WS_CHILD | WS_VISIBLE,
             22,
             50,
@@ -318,35 +350,79 @@ class InstallerWindow:
             62,
             self.hwnd,
         )
-        for label, x, control_id in (
-            ("Install / Update", 22, ID_INSTALL),
-            ("Repair", 162, ID_REPAIR),
-            ("Uninstall", 262, ID_UNINSTALL),
-            ("Copy & Open Settings", 372, ID_FALLBACK),
+        self._create_control(
+            "STATIC",
+            "Optional: paste your current Custom Instructions here to create a local update or removal result. "
+            "Text stays on this device.",
+            WS_CHILD | WS_VISIBLE,
+            22,
+            116,
+            835,
+            28,
+            self.hwnd,
+        )
+        self.source = self._create_control(
+            "EDIT",
+            "",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL
+            | ES_AUTOHSCROLL,
+            22,
+            145,
+            835,
+            165,
+            self.hwnd,
+        )
+        for label, x, width, control_id in (
+            ("Generate block", 22, 125, ID_GENERATE),
+            ("Update instructions", 157, 145, ID_UPDATE),
+            ("Removal instructions", 312, 150, ID_REMOVE),
+            ("Repair instructions", 472, 145, ID_REPAIR),
+            ("Copy managed block", 627, 145, ID_COPY_BLOCK),
         ):
             self._create_control(
-                "BUTTON", label, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, 122, 130 if x != 372 else 180, 32,
+                "BUTTON", label, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, 320, width, 32,
                 self.hwnd, control_id
             )
+        self._create_control(
+            "BUTTON", "Open ChatGPT Web", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 22, 365, 160, 32,
+            self.hwnd, ID_OPEN_WEB
+        )
+        self._create_control(
+            "STATIC",
+            "Local result / preview (no account verification):",
+            WS_CHILD | WS_VISIBLE,
+            22,
+            408,
+            835,
+            24,
+            self.hwnd,
+        )
         self.preview = self._create_control(
             "EDIT",
             "Choose an action to generate a complete change preview.",
             WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL
             | ES_AUTOHSCROLL | ES_READONLY,
             22,
-            170,
+            435,
             835,
-            390,
+            265,
             self.hwnd,
         )
         self.confirm = self._create_control(
-            "BUTTON", "Confirm change", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 697, 575, 160, 34,
+            "BUTTON", "Copy generated instructions", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 657, 710, 200, 34,
             self.hwnd, ID_CONFIRM
         )
         user32.EnableWindow(self.confirm, False)
         self.status = self._create_control(
-            "STATIC", "ChatGPT Desktop will be opened automatically when possible.", WS_CHILD | WS_VISIBLE,
-            22, 620, 835, 28, self.hwnd
+            "STATIC",
+            "Next: Open ChatGPT Web → Settings → Personalization → Custom Instructions. "
+            "Preserve unrelated content and save manually.",
+            WS_CHILD | WS_VISIBLE,
+            22,
+            760,
+            835,
+            28,
+            self.hwnd,
         )
         user32.ShowWindow(self.hwnd, SW_SHOW)
         user32.UpdateWindow(self.hwnd)

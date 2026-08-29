@@ -1,12 +1,27 @@
-# Security
+# Security and privacy
 
-Handoff Guard's Windows installer modifies ChatGPT Custom Instructions only after displaying a preview and receiving explicit confirmation.
+Handoff Guard Guided Install generates and validates a managed text block. It
+does not read or change ChatGPT account settings.
 
-- Existing content is read only to create the preview and preserve it during the edit.
-- The original value is backed up locally before every write.
-- Custom Instructions, chat history, account tokens, and passwords are never uploaded or requested.
-- The installer does not modify ChatGPT databases or credentials.
-- Automatic installation stops when the existing value cannot be read or the editor cannot be identified uniquely.
-- Uninstall removes only the checksummed Handoff Guard managed block.
+The only URL it opens is the public ChatGPT Web entry point:
+`https://chatgpt.com/`.
 
-Please report security issues privately to the repository owner rather than opening a public issue containing personal Custom Instructions.
+- The installer does not access ChatGPT credentials, tokens, cookies, chat
+  history, or a local ChatGPT database.
+- It does not use UI Automation, coordinate automation, OCR, private APIs, or
+  guessed `chatgpt://` deep links.
+- It does not send your Custom Instructions to Handoff Guard's servers or
+  third parties.
+- Local transformations operate only on text you explicitly paste into the
+  installer or service.
+- Any local backup is user-provided text stored on the device; it is not an
+  automatic backup of ChatGPT Custom Instructions.
+- Local validation covers the canonical payload, managed-block format, version,
+  and checksum. It cannot verify that ChatGPT received, saved, or synchronized
+  the block.
+
+When you manually save the generated block in ChatGPT, that content is handled
+and synchronized according to [OpenAI's ChatGPT data practices](https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/).
+
+Please report security issues privately to the repository owner rather than
+opening a public issue containing personal Custom Instructions.

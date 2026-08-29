@@ -10,7 +10,7 @@ Handoff Guard 帮助普通 Chat 判断什么时候应该从规划进入 Work，�
 Chat / Architect → 结构化交接 → 执行前检查 → Work
 ```
 
-它不只是一段静态提示词。仓库中包含确定性的模型选择器、版本化交接契约、校验器、回归样例、执行边界规则和完整安装生命周期。Custom Instructions 只是目前将这些能力接入 ChatGPT 的一种轻量运行适配层，不是产品的全部架构。
+它不只是一段静态提示词。仓库中包含确定性的模型选择器、版本化交接契约、校验器、回归样例和执行边界规则。Custom Instructions 只是目前将这些能力接入 ChatGPT 的一种轻量运行适配层，不是产品的全部架构。
 
 ## 能做什么
 
@@ -19,11 +19,11 @@ Chat / Architect → 结构化交接 → 执行前检查 → Work
 - **推荐合适的模型**：把工作量和独立决策风险分开判断，避免“大任务必用最强模型”。
 - **执行前检查**：在接收代理开始改文件前返回 `PASS`、`BLOCK` 或 `UNVERIFIED`。
 - **让规则可以验证**：校验交接结构，并用回归样例持续检查模型路由策略。
-- **安全管理 ChatGPT 适配层**：Windows 上支持预览、安装、升级、修复、本地备份、卸载和手动备用流程。
+- **引导安全安装**：Windows 上生成、校验并复制管理区块，由用户手动保存到 ChatGPT。
 
 ## 安装
 
-### Windows 一键安装器
+### Windows Guided Install 引导安装器
 
 主要发行文件为：
 
@@ -31,17 +31,21 @@ Chat / Architect → 结构化交接 → 执行前检查 → Work
 HandoffGuard-Installer-v0.1.0.exe
 ```
 
-从仓库的 [GitHub Releases](https://github.com/strangeyu911-tech/handoff-guard/releases) 下载，先打开 ChatGPT Desktop，再运行安装器。安装器会完整展示修改前后内容，只有用户确认后才会保留已有指令、创建本地备份、写入带版本标记的 Handoff Guard 管理区块，并回读设置验证结果。
+从仓库的 [GitHub Releases](https://github.com/strangeyu911-tech/handoff-guard/releases) 下载并运行安装器。它会生成带版本标记的 Handoff Guard 管理区块，复制到剪贴板，并打开 [ChatGPT Web](https://chatgpt.com/)。最终粘贴和保存始终由你本人在 `Settings → Personalization → Custom Instructions` 中完成。
+
+安装器不会读取、写入、保存、验证、备份、修复或卸载 ChatGPT 账户设置。当前没有公开的 Custom Instructions API，也没有可依赖的设置深链。安装器中的本地升级/移除工具只处理你主动粘贴进去的文本。
+
+状态示例：`Handoff Guard 管理区块已复制。你的 ChatGPT 账户设置尚未发生任何变化。`
 
 如果 Release 尚未发布安装文件，可以参照 [Windows 安装器构建与验收说明](docs/windows-installer.md)从源码构建。
 
-安装过程会明确说明其使用 ChatGPT Custom Instructions。它是当前 ChatGPT 环境中的运行适配层；核心策略、模型路由、交接结构、校验和安装生命周期属于独立的产品层。
+安装过程会明确说明其使用 ChatGPT Custom Instructions。它是当前 ChatGPT 环境中的运行适配层；核心策略、模型路由、交接结构和校验属于独立的产品层。
 
 ### 手动安装
 
-如果 UI Automation 无法唯一识别并读取编辑框，安装器会拒绝写入，并提供 **Copy & Open Settings**。也可以打开 [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md)，复制自动生成的运行配置，把它追加到现有 Custom Instructions 中，不能覆盖其他内容。
+也可以打开 [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md)，复制自动生成的运行配置，把它追加到现有 Custom Instructions 中，不能覆盖其他内容。
 
-手动安装可以启用运行规则，但不提供受管理的升级、修复、备份和卸载能力。
+手动安装可以启用运行规则。请保留管理区块完整，以便按本地 Generate、Update 和 Removal 指引操作。
 
 ### Skill 适配层（高级）
 
@@ -65,18 +69,17 @@ Handoff Guard
 ├─ Runtime adapters（运行适配层）
 │  ├─ Windows Installer / Custom Instructions
 │  └─ Skill adapter
-└─ Product lifecycle（产品生命周期）
-   ├─ 安装与升级
-   ├─ 预览与本地备份
-   ├─ 修复与写后验证
-   └─ 卸载与手动 fallback
+└─ Guided install lifecycle（引导安装生命周期）
+   ├─ 生成与复制
+   ├─ 本地升级/移除文本变换
+   └─ 在 ChatGPT 中手动保存
 ```
 
 `runtime/custom-instructions.txt` 是 ChatGPT 运行适配层的 canonical template。Windows 安装器和自动生成的 `CUSTOM-INSTRUCTIONS.md` 都读取这一个文件，测试还会检查它是否覆盖 Core 的路由维度。因此安装器不会另外维护一套容易漂移的手写策略。
 
-## 安全的受管理安装
+## Guided Install 管理区块
 
-Windows 适配层通过可访问控件名称使用 Microsoft UI Automation，不依赖绝对屏幕坐标。管理区块包含版本和校验和：
+Windows 安装器不使用 UI Automation、桌面 selector、坐标点击、OCR、私有接口、token 或 cookie。管理区块包含版本和校验和：
 
 ```text
 [HANDOFF-GUARD:BEGIN version=0.1.0 sha256=...]
@@ -84,14 +87,14 @@ Windows 适配层通过可访问控件名称使用 Microsoft UI Automation，不
 [HANDOFF-GUARD:END]
 ```
 
-- **安装**：在现有内容之外追加管理区块，不覆盖其他指令。
-- **升级**：只在原位置替换一个完整、有效的旧版本区块。
-- **卸载**：只删除通过校验的 Handoff Guard 管理区块。
-- **修复**：发现截断、重复、标记异常或校验和不一致时，重新显示预览并要求确认。
-- **备份**：每次写入前把原始内容保存在 `%LOCALAPPDATA%\HandoffGuard\backups\`。
-- **验证**：保存后重新读取；验证失败时明确显示备份位置。
+- **生成**：在本地生成 canonical 管理区块。
+- **复制**：把生成的区块或本地变换结果放到剪贴板。
+- **升级**：对用户提供的文本只替换一个有效旧区块，并保留区块外内容。
+- **移除**：生成仅删除 Handoff Guard 区块后的文本。
+- **修复**：用户提供损坏区块后，在本地重新生成 canonical 区块。
+- **校验**：在本地检查 payload、版本、标记格式和校验和；不能验证 ChatGPT 是否已粘贴、保存或同步。
 
-Custom Instructions 不会上传。安装器不读取聊天记录、不索取 OpenAI 密码、不读取账号 token，也不修改 ChatGPT 本地数据库。详见 [SECURITY.md](SECURITY.md)。
+安装器不会将 Custom Instructions 发送到自己的服务器或第三方，也不会访问 ChatGPT 凭据。当你手动把生成的区块保存到 ChatGPT 后，相关内容将按照 [OpenAI 的 ChatGPT 数据实践](https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/)处理和同步。详见 [SECURITY.md](SECURITY.md)。
 
 ## 交接与执行前检查契约
 
@@ -150,7 +153,7 @@ python scripts/generate_custom_instructions.py --check
 python -m unittest discover -s tests -v
 ```
 
-自动测试覆盖 selector 回归、交接校验、自动生成边界、运行模板一致性、管理区块生命周期、备份、确认、写入失败、修复和 fallback。它不能证明某个 ChatGPT Desktop 版本一定暴露了所需 UI Automation 控件；正式发布前仍需按照 [docs/windows-installer.md](docs/windows-installer.md) 在真实环境验收。
+自动测试覆盖 selector 回归、交接校验、自动生成边界、运行模板一致性、管理区块生命周期、本地文本变换、本地备份、确认、修复和 Guided Install 流程。它不会验证 ChatGPT 是否收到或保存了任何内容；账户变更有意留在安装器边界之外。
 
 ## 仓库结构
 
