@@ -23,6 +23,9 @@ CUSTOM_INSTRUCTION_NAMES = (
 )
 SAVE_NAMES = ("Save", "Done", "保存", "完成")
 LOGGER = logging.getLogger("handoff_guard.uia")
+UIA_TREE_MAX_NODES = 300
+UIA_TREE_MAX_DEPTH = 10
+UIA_SENSITIVE_CONTROL_TYPES = {"Edit", "Document"}
 
 
 def _configure_logging() -> None:
@@ -34,7 +37,13 @@ def _configure_logging() -> None:
         target = log_dir / "installer-uia.log"
     except OSError:
         target = Path(os.environ.get("TEMP", ".")) / "handoff-guard-uia.log"
-    handler = logging.FileHandler(target, encoding="utf-8")
+    try:
+        handler = logging.FileHandler(target, encoding="utf-8")
+    except OSError:
+        # Diagnostics must never turn a safe read failure into an installer
+        # failure (for example when a previous process still holds the log).
+        LOGGER.addHandler(logging.NullHandler())
+        return
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     LOGGER.addHandler(handler)
     LOGGER.setLevel(logging.INFO)
@@ -55,6 +64,90 @@ def _control_metadata(control: Any) -> str:
         return ", ".join(f"{key}={value!r}" for key, value in values.items())
     except Exception as exc:
         return f"metadata_error={type(exc).__name__}"
+
+
+def _safe_control_field(control: Any, field: str) -> tuple[Any, str | None]:
+    try:
+        info = control.element_info
+        return getattr(info, field), None
+    except Exception as exc:
+        return None, type(exc).__name__
+
+
+def _safe_pattern(control: Any, pattern: str) -> str:
+    try:
+        return "available" if getattr(control, pattern) is not None else "absent"
+    except Exception as exc:
+        return f"error:{type(exc).__name__}"
+
+
+def _safe_tree_name(control: Any, control_type: Any, name: Any) -> str:
+    if not name:
+        return ""
+    name = str(name)
+    if control_type in UIA_SENSITIVE_CONTROL_TYPES:
+        return f"<redacted len={len(name)}>"
+    if len(name) > 160:
+        return f"<redacted len={len(name)}>"
+    return name
+
+
+def _tree_node_line(control: Any, depth: int, path: str) -> str:
+    fields: dict[str, Any] = {}
+    errors: dict[str, str] = {}
+    for field in ("control_type", "automation_id", "name", "class_name", "is_enabled", "is_offscreen", "process_id"):
+        value, error = _safe_control_field(control, field)
+        fields[field] = value
+        if error:
+            errors[field] = error
+    fields["name"] = _safe_tree_name(control, fields["control_type"], fields["name"])
+    patterns = {
+        "invoke": _safe_pattern(control, "iface_invoke"),
+        "selection_item": _safe_pattern(control, "iface_selection_item"),
+        "legacy_iaccessible": _safe_pattern(control, "iface_legacy_iaccessible"),
+        "value": _safe_pattern(control, "iface_value"),
+        "text": _safe_pattern(control, "iface_text"),
+    }
+    return (
+        f"stage=uia_tree_node depth={depth} path={path} "
+        f"control_type={fields['control_type']!r} automation_id={fields['automation_id']!r} "
+        f"name={fields['name']!r} class_name={fields['class_name']!r} "
+        f"is_enabled={fields['is_enabled']!r} is_offscreen={fields['is_offscreen']!r} "
+        f"process_id={fields['process_id']!r} patterns={patterns!r} metadata_errors={errors!r}"
+    )
+
+
+def _log_uia_tree(root: Any) -> None:
+    """Log a bounded, content-safe UIA tree snapshot for selector diagnosis."""
+    _configure_logging()
+    count = 0
+    stack: list[tuple[Any, int, str]] = [(root, 0, "0")]
+    while stack and count < UIA_TREE_MAX_NODES:
+        control, depth, path = stack.pop()
+        try:
+            LOGGER.info(_tree_node_line(control, depth, path))
+        except Exception as exc:
+            LOGGER.info("stage=uia_tree_node depth=%d path=%s metadata_error=%s", depth, path, type(exc).__name__)
+        count += 1
+        if depth >= UIA_TREE_MAX_DEPTH:
+            continue
+        try:
+            children = list(control.children())
+        except Exception as exc:
+            LOGGER.info("stage=uia_tree_children depth=%d path=%s error=%s", depth, path, type(exc).__name__)
+            continue
+        for index, child in reversed(list(enumerate(children))):
+            stack.append((child, depth + 1, f"{path}.{index}"))
+    if stack:
+        LOGGER.info(
+            "stage=uia_tree_truncated nodes=%d max_nodes=%d max_depth=%d remaining=%d",
+            count,
+            UIA_TREE_MAX_NODES,
+            UIA_TREE_MAX_DEPTH,
+            len(stack),
+        )
+    else:
+        LOGGER.info("stage=uia_tree_complete nodes=%d max_nodes=%d max_depth=%d", count, UIA_TREE_MAX_NODES, UIA_TREE_MAX_DEPTH)
 
 
 def _log_control(stage: str, control: Any, message: str) -> None:
@@ -131,6 +224,7 @@ class ChatGPTUIAAdapter:
             LOGGER.info("stage=top_level_window_not_found")
             raise SettingsUnavailableError("ChatGPT Desktop is not open or could not be found")
         _log_control("top_level_window_found", windows[0], "window_selected")
+        _log_uia_tree(windows[0])
         return windows[0]
 
     @staticmethod
