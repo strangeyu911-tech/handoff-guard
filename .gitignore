@@ -23,3 +23,10 @@ Thumbs.db
 coverage.xml
 .coverage
 htmlcov/
+.pytest_cache/
+
+# Windows installer build output
+.installer-venv/
+build/
+dist/
+*.spec

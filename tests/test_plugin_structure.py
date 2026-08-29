@@ -36,6 +36,13 @@ class PluginStructureTests(unittest.TestCase):
         self.assertNotIn("mcpServers", manifest)
         self.assertNotIn("apps", manifest)
 
+    def test_installer_and_plugin_versions_match(self):
+        from handoff_guard_installer.managed_block import MANAGED_VERSION
+
+        manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(MANAGED_VERSION, manifest["version"])
+        self.assertIn(f"v{MANAGED_VERSION}", (ROOT / "scripts" / "build_installer.ps1").read_text())
+
     def test_reused_resources_resolve_from_canonical_skill(self):
         skill_root = ROOT / "skills" / "handoff-guard"
         for relative in (
