@@ -14,6 +14,60 @@ if os.name == "nt":
     user32 = ctypes.windll.user32
     kernel32 = ctypes.windll.kernel32
     gdi32 = ctypes.windll.gdi32
+
+    # ctypes defaults unspecified parameters to C ``int``.  That is unsafe
+    # for HWND/HANDLE values on 64-bit Windows: a valid handle can exceed the
+    # signed 32-bit range and fail before the Win32 API is called.  Declare
+    # every handle-bearing function used by the installer explicitly.
+    user32.OpenClipboard.argtypes = [wintypes.HWND]
+    user32.OpenClipboard.restype = wintypes.BOOL
+    user32.EmptyClipboard.argtypes = []
+    user32.EmptyClipboard.restype = wintypes.BOOL
+    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    user32.SetClipboardData.restype = wintypes.HANDLE
+    user32.CloseClipboard.argtypes = []
+    user32.CloseClipboard.restype = wintypes.BOOL
+    user32.MessageBoxW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT]
+    user32.MessageBoxW.restype = ctypes.c_int
+    user32.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        wintypes.HWND, ctypes.c_void_p, wintypes.HINSTANCE, ctypes.c_void_p,
+    ]
+    user32.CreateWindowExW.restype = wintypes.HWND
+    user32.SetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    user32.SetWindowTextW.restype = wintypes.BOOL
+    user32.EnableWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+    user32.EnableWindow.restype = wintypes.BOOL
+    user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.SendMessageW.restype = ctypes.c_ssize_t
+    user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.DefWindowProcW.restype = ctypes.c_ssize_t
+    user32.PostQuitMessage.argtypes = [ctypes.c_int]
+    user32.PostQuitMessage.restype = None
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    user32.UpdateWindow.argtypes = [wintypes.HWND]
+    user32.UpdateWindow.restype = wintypes.BOOL
+    user32.LoadCursorW.argtypes = [wintypes.HINSTANCE, ctypes.c_void_p]
+    user32.LoadCursorW.restype = wintypes.HANDLE
+    user32.RegisterClassW.restype = ctypes.c_ushort
+    user32.GetMessageW.restype = wintypes.BOOL
+    user32.TranslateMessage.restype = wintypes.BOOL
+    user32.DispatchMessageW.restype = ctypes.c_ssize_t
+
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
+    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalLock.restype = ctypes.c_void_p
+    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalUnlock.restype = wintypes.BOOL
+    kernel32.GlobalFree.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalFree.restype = wintypes.HGLOBAL
+    gdi32.GetStockObject.argtypes = [ctypes.c_int]
+    gdi32.GetStockObject.restype = wintypes.HGDIOBJ
 else:
     user32 = kernel32 = gdi32 = None
 
@@ -79,6 +133,13 @@ class MSG(ctypes.Structure):
     ]
 
 
+if os.name == "nt":
+    user32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+    user32.GetMessageW.argtypes = [ctypes.POINTER(MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+    user32.TranslateMessage.argtypes = [ctypes.POINTER(MSG)]
+    user32.DispatchMessageW.argtypes = [ctypes.POINTER(MSG)]
+
+
 _active_window: "InstallerWindow | None" = None
 
 
@@ -93,11 +154,9 @@ def _copy_to_clipboard(text: str) -> None:
     handle = None
     try:
         user32.EmptyClipboard()
-        kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
         handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
         if not handle:
             raise MemoryError("Could not allocate clipboard memory")
-        kernel32.GlobalLock.restype = ctypes.c_void_p
         pointer = kernel32.GlobalLock(handle)
         if not pointer:
             raise MemoryError("Could not lock clipboard memory")
@@ -128,7 +187,6 @@ class InstallerWindow:
 
     @staticmethod
     def _create_control(class_name, text, style, x, y, width, height, parent, control_id=0):
-        user32.CreateWindowExW.restype = wintypes.HWND
         hwnd = user32.CreateWindowExW(
             0,
             class_name,
@@ -192,13 +250,15 @@ class InstallerWindow:
 
     def _fallback(self) -> None:
         try:
-            block = ManualFallback(_copy_to_clipboard, open_chatgpt_or_personalization).copy_and_open()
+            block = ManualFallback(_copy_to_clipboard, lambda: None).copy_and_open()
         except Exception as exc:
             _message(self.hwnd, "Handoff Guard", str(exc), MB_OK | MB_ICONERROR)
             return
+        guidance = open_chatgpt_or_personalization()
         self._set_preview(block)
         self._set_status(
-            "Managed block copied. Paste it beside existing instructions; do not replace unrelated text."
+            "Managed block copied. Paste it beside existing instructions; do not replace unrelated text. "
+            + guidance
         )
 
     def _window_proc(self, hwnd, message, wparam, lparam):
@@ -231,7 +291,6 @@ class InstallerWindow:
         window_class.hbrBackground = ctypes.c_void_p(COLOR_WINDOW + 1)
         window_class.lpszClassName = self.CLASS_NAME
         user32.RegisterClassW(ctypes.byref(window_class))
-        user32.CreateWindowExW.restype = wintypes.HWND
         self.hwnd = user32.CreateWindowExW(
             0,
             self.CLASS_NAME,

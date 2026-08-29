@@ -14,6 +14,10 @@ try {
         --onefile `
         --windowed `
         --name $ArtifactName `
+        --hidden-import pywinauto.uia_element_info `
+        --hidden-import pywinauto.uia_defines `
+        --hidden-import comtypes.gen.UIAutomationClient `
+        --hidden-import comtypes.gen.stdole `
         --add-data "runtime/custom-instructions.txt;runtime" `
         installer.py
     if ($LASTEXITCODE -ne 0) {
