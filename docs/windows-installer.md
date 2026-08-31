@@ -41,11 +41,13 @@ claim to back up ChatGPT account settings automatically.
 
 ## Why there is no automatic install
 
-ChatGPT does not provide a public Custom Instructions API. The current desktop
-UI does not expose a reliable supported contract for this editor, and there is
-no supported settings deep link. The product therefore does not use UIA
-selectors, coordinate clicks, OCR, guessed `chatgpt://` links, private APIs,
-tokens, cookies, or session data.
+ChatGPT does not provide a public Custom Instructions API for the current
+product path. In the currently tested ChatGPT Desktop version, the editor did
+not expose a reliable supported contract for this operation, and there is no
+supported settings deep link. This is a scoped platform conclusion, not a
+claim about every future version or plan. The product therefore does not use
+UIA selectors, coordinate clicks, OCR, guessed `chatgpt://` links, private
+APIs, tokens, cookies, or session data.
 
 ## Build
 
