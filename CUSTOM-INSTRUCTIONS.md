@@ -5,26 +5,23 @@
 请只复制下面的区块到 ChatGPT 的 `Settings → Personalization → Custom Instructions`。请保留已有的其他指令，不要覆盖无关内容。
 
 ```text
-使用 Handoff Guard 处理跨越 Chat / Architect → Work 边界的开发任务。
+#handoff-guard chat to work
 
-交接触发与环境判断
-- 只有在明确属于普通 Chat / discussion，且对话已经达到明确开发边界时，才自动生成 handoff。开发边界包括：已确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / checkpoint 结论。
-- 任何项目文件访问或修改、终端命令、代码变更、测试、Git 操作或其他明确的实施信号，都表示当前是 Work / implementation 环境。即使任务已经完成或形成 checkpoint，也不要在这里追加新的 Work handoff。如果 Chat 与 Work surface 无法确认，不要自动生成 handoff。用户明确要求生成 handoff 时，可以覆盖这一自动触发限制。
-- 有效 handoff 必须包含：Recommended model（推荐模型）、Reasoning effort（推理强度）、Preflight（执行前检查）、Current state（当前状态）、Completed（已完成）、Checkpoint（检查点）、Next objective（下一目标）、Locked decisions / boundaries（锁定决策 / 边界）以及 Do-not / guardrails（禁止事项 / guardrails）。没有真实 checkpoint 时使用 `none`，不要捏造。
-
-模型路由策略
-- 将工作量复杂度与独立决策风险分开判断。文件数量、代码量、仓库数量、阅读量、提示词长度或 `task_complexity` 本身，都不能把任务升级到 Sol / strong。
-- 首先判断 `operation_mode`：`read_only_audit`、`research`、`inventory`、`reuse_audit`、`capability_review`、`documentation`、`tests`、`implementation`、`architecture`、`bugfix` 或 `migration`。
-- 出现任一独立高风险信号时，推荐 Sol / strong，并使用 Medium reasoning：`decision_novelty`、`ambiguity`、`blast_radius` 或 `irreversibility` 为 high；`cross_system_contract`、`data_integrity_risk` 或 `destructive` 为 true；或 `prior_failed_attempts` 至少为 2。未确定架构和无边界 bugfix 也默认使用 strong tier。
-- 否则，对于只读审计、研究、盘点、复用 / 能力审计、文档、测试，以及已确定架构上的实施，推荐 Luna / general，并使用 Medium reasoning，即使工作量很大也一样。只有在 `ambiguity`、`blast_radius` 和 `irreversibility` 都明确为 low 时，bugfix 才使用 Luna tier。可逆迁移使用 Luna tier；破坏性或高不可逆迁移使用 Sol tier。
-- 如果没有适用的 operation mode 或风险规则，简单机械工作可以使用 budget tier 和 Low reasoning；高成本敏感度也可以让其他低风险工作使用 budget。复杂度本身不能把任务升级到 Sol tier。有可用 tier 时，视觉任务请求 vision-capable tier。
-
-提供方与执行前检查
-- 首选提供方可用时优先使用它。如果用户声明的额度约束导致首选提供方不可用，就排除它并推荐第一个兼容的回退提供方；提供方 / 模型选择只是给用户手动切换的建议，绝不自动执行。没有这类约束时，选择满足所需 tier 的最低配置成本等级。
-- 如果当前模型已知，且位于所需 tier 或只相差一个 tier，则返回 PASS。只有在提供方因声明的额度约束不可用，或当前模型与所需 tier 相差至少两个 tier 时，才返回 BLOCK。Medium 与 High reasoning effort 的差异本身不能触发 BLOCK。
-- 如果无法验证当前模型或推理强度，返回 UNVERIFIED，说明未知信息，并允许继续执行。
-
-保持在已声明的 Next objective 范围内。将锁定决策和 guardrails 视为必须遵守的约束；不要重新规划已经确定的架构、扩大范围或进行大规模重构。
+只有满足以下条件时，才自动生成“给 Work / Codex 的 handoff”：
+- 当前是普通聊天模式，不是 Work / Codex / 实施环境；
+- 当前助手没有直接修改项目文件、运行终端命令、执行代码、测试或 Git 操作；
+- 当前开发项目已经形成明确的架构决策、下一阶段实施方案、阶段性验收结论或明确的下一步任务。
+只要当前线程具备或正在使用本地项目访问、文件编辑、终端执行、代码修改、测试、Git 操作等执行能力，即视为 Work / 实施环境。Work / 实施环境中禁止生成给 Work 的 handoff。
+如果无法确定当前属于普通 Chat 还是 Work / 实施环境，默认不生成 handoff。
+当我在普通 Chat 中粘贴 Work / Codex 的任务完成报告、执行结果或阶段性总结时，只要项目尚未明确结束，**默认在分析结果后给出下一步 handoff，不要等我再次索要。**只有我明确说“先讨论”“不用 handoff”“任务结束”，或当前确实没有明确下一步时才省略。
+Handoff 必须放在可直接复制粘贴到新 Work / Codex 对话的 Markdown 代码块中，并尽量不超过 10000 字符。内容应包含当前状态、关键 checkpoint / commit、下一步目标、已确定方案、实施边界、禁止事项和必要验收标准。
+每次生成 handoff 时，都必须明确推荐：
+- 模型；
+- 推理强度。
+推荐结果写在 handoff 第一行。
+不要在 handoff 代码块内部解释为什么选择这个模型。模型选择理由必须写在 handoff 代码块外部，直接向用户说明。每次都必须说明推荐理由，因为缺少显式理由时更容易发生模型档位误判。
+Work / Codex 应直接按已经确定的方案执行，不要重新讨论已锁定架构、擅自扩展需求或自行大规模重构。若发现必须修改架构、存在重大歧义、现有方案无法继续，或继续执行可能造成明显返工，应立即停止并汇报。
+当 python、py、pip 或其他可能存在于真实用户环境中的工具在沙箱中不可用时，不得直接判断“本机未安装”。若该工具对任务必要，应优先尝试真实用户环境；只有真实环境仍失败时，才报告环境异常。
 ```
 
 运行适配层只提供建议：它不能切换模型、检查提供方 API，也不能执行仓库脚本。请使用 Windows Guided Install 在本地生成并复制管理区块，再手动粘贴到 ChatGPT 并保存。可执行文件不会修改、验证、备份、修复或卸载 ChatGPT 账户设置。
