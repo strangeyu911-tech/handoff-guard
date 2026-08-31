@@ -1,20 +1,20 @@
-Use Handoff Guard for development tasks that cross a Chat / Architect → Work boundary.
+使用 Handoff Guard 处理跨越 Chat / Architect → Work 边界的开发任务。
 
-Surface and handoff gate
-- Generate an automatic handoff only in a reliably ordinary Chat / discussion conversation after a concrete development boundary: a settled architecture decision, a specific next-stage implementation plan, or a stage-level acceptance/checkpoint conclusion.
-- Any file access or edit, terminal command, code change, test run, Git operation, or other clear implementation signal means this is a Work / implementation environment. Do not append a new Work handoff there, even after completion or a checkpoint. If the surface is uncertain, do not generate one automatically. An explicit request to generate a handoff overrides this gate.
-- A valid handoff must include: Recommended model, Reasoning effort, Preflight, Current state, Completed, Checkpoint, Next objective, Locked decisions / boundaries, and Do-not / guardrails. Use `none` when there is no real checkpoint; do not invent one.
+交接触发与环境判断
+- 只有在明确属于普通 Chat / discussion，且对话已经达到明确开发边界时，才自动生成 handoff。开发边界包括：已确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / checkpoint 结论。
+- 任何项目文件访问或修改、终端命令、代码变更、测试、Git 操作或其他明确的实施信号，都表示当前是 Work / implementation 环境。即使任务已经完成或形成 checkpoint，也不要在这里追加新的 Work handoff。如果 Chat 与 Work surface 无法确认，不要自动生成 handoff。用户明确要求生成 handoff 时，可以覆盖这一自动触发限制。
+- 有效 handoff 必须包含：Recommended model（推荐模型）、Reasoning effort（推理强度）、Preflight（执行前检查）、Current state（当前状态）、Completed（已完成）、Checkpoint（检查点）、Next objective（下一目标）、Locked decisions / boundaries（锁定决策 / 边界）以及 Do-not / guardrails（禁止事项 / guardrails）。没有真实 checkpoint 时使用 `none`，不要捏造。
 
-Routing policy
-- Separate workload complexity from independent decision risk. File count, code volume, repository count, reading volume, prompt length, or task_complexity alone must not escalate to Sol / strong.
-- First classify operation_mode: read_only_audit, research, inventory, reuse_audit, capability_review, documentation, tests, implementation, architecture, bugfix, or migration.
-- Recommend Sol / strong with Medium reasoning when any independent high-risk signal is present: decision_novelty, ambiguity, blast_radius, or irreversibility is high; cross_system_contract, data_integrity_risk, or destructive is true; or prior_failed_attempts is at least 2. Unsettled architecture and an unbounded bugfix are also strong-tier defaults.
-- Otherwise recommend Luna / general with Medium reasoning for read-only audits, research, inventories, reuse or capability audits, documentation, tests, and implementation against a settled architecture, even when the workload is large. A bugfix is Luna-tier only when ambiguity, blast radius, and irreversibility are all explicitly low. A reversible migration is Luna-tier. A destructive or high-irreversibility migration is Sol-tier.
-- If no operation mode or risk rule applies, simple mechanical work may use the budget tier with Low reasoning; high cost sensitivity may also use budget for otherwise low-risk work. Complexity alone never makes a task Sol-tier. Vision work requests a vision-capable tier when available.
+模型路由策略
+- 将工作量复杂度与独立决策风险分开判断。文件数量、代码量、仓库数量、阅读量、提示词长度或 `task_complexity` 本身，都不能把任务升级到 Sol / strong。
+- 首先判断 `operation_mode`：`read_only_audit`、`research`、`inventory`、`reuse_audit`、`capability_review`、`documentation`、`tests`、`implementation`、`architecture`、`bugfix` 或 `migration`。
+- 出现任一独立高风险信号时，推荐 Sol / strong，并使用 Medium reasoning：`decision_novelty`、`ambiguity`、`blast_radius` 或 `irreversibility` 为 high；`cross_system_contract`、`data_integrity_risk` 或 `destructive` 为 true；或 `prior_failed_attempts` 至少为 2。未确定架构和无边界 bugfix 也默认使用 strong tier。
+- 否则，对于只读审计、研究、盘点、复用 / 能力审计、文档、测试，以及已确定架构上的实施，推荐 Luna / general，并使用 Medium reasoning，即使工作量很大也一样。只有在 `ambiguity`、`blast_radius` 和 `irreversibility` 都明确为 low 时，bugfix 才使用 Luna tier。可逆迁移使用 Luna tier；破坏性或高不可逆迁移使用 Sol tier。
+- 如果没有适用的 operation mode 或风险规则，简单机械工作可以使用 budget tier 和 Low reasoning；高成本敏感度也可以让其他低风险工作使用 budget。复杂度本身不能把任务升级到 Sol tier。有可用 tier 时，视觉任务请求 vision-capable tier。
 
-Provider and preflight
-- Prefer the requested provider when available. If a declared quota constraint makes that provider unavailable, exclude it and recommend the first compatible fallback; provider/model selection is a recommendation for manual switching, never an automatic action. Otherwise choose the lowest configured cost class for the required tier.
-- If the current model is known, PASS when it is in the required tier or within one tier. BLOCK only for a provider made unavailable by a declared quota constraint or a model at least two tiers away from the required tier. Medium versus High reasoning effort alone never blocks.
-- If the current model or reasoning effort cannot be verified, report UNVERIFIED, explain what is unknown, and allow execution to continue.
+提供方与执行前检查
+- 首选提供方可用时优先使用它。如果用户声明的额度约束导致首选提供方不可用，就排除它并推荐第一个兼容的回退提供方；提供方 / 模型选择只是给用户手动切换的建议，绝不自动执行。没有这类约束时，选择满足所需 tier 的最低配置成本等级。
+- 如果当前模型已知，且位于所需 tier 或只相差一个 tier，则返回 PASS。只有在提供方因声明的额度约束不可用，或当前模型与所需 tier 相差至少两个 tier 时，才返回 BLOCK。Medium 与 High reasoning effort 的差异本身不能触发 BLOCK。
+- 如果无法验证当前模型或推理强度，返回 UNVERIFIED，说明未知信息，并允许继续执行。
 
-Stay within the stated next objective. Treat locked decisions and guardrails as binding; do not re-plan settled architecture, expand scope, or perform a broad refactor.
+保持在已声明的 Next objective 范围内。将锁定决策和 guardrails 视为必须遵守的约束；不要重新规划已经确定的架构、扩大范围或进行大规模重构。

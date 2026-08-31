@@ -18,7 +18,7 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("UNVERIFIED", chinese)
 
     def test_docs_do_not_claim_automatic_switching(self):
-        for filename in ("README.md", "README.zh-CN.md", "CUSTOM-INSTRUCTIONS.md", "SKILL.md"):
+        for filename in ("README.md", "README.zh-CN.md", "CUSTOM-INSTRUCTIONS.md", "CUSTOM-INSTRUCTIONS.en.md", "SKILL.md"):
             text = (ROOT / filename).read_text(encoding="utf-8").lower()
             self.assertNotIn("automatically switches chatgpt", text)
             self.assertNotIn("自动切换 chatgpt 模型", text)

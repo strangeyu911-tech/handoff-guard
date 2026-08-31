@@ -8,8 +8,7 @@
 
 我做 Handoff Guard 的原因其实很简单：我不想把 Codex / Work 的
 coding-agent token / quota 浪费在本来可以先在普通聊天里完成的讨论、决策和
-重复探索上。普通 Chat 通常与 Work / Codex 的 coding-agent quota 分开计量，
-但具体额度规则取决于宿主产品和套餐。
+重复探索上。普通 Chat 通常与 Work / Codex 的 coding-agent quota 分开计量。
 
 不要让 coding agent 替你完成所有前期思考：
 
@@ -23,8 +22,7 @@ coding-agent token / quota 浪费在本来可以先在普通聊天里完成的�
 Handoff Guard 会推荐“足够且成本最低”的模型，让简单或低风险任务默认留在
 Luna / general，而不是因为文件多、代码多、阅读量大或提示词很长就升级到
 Sol。目标是减少重复探索、错误模型档位和无意义的 coding-agent token / quota
-消耗，让 Plus / Pro 等用户的 coding-agent 额度更耐用。具体额度规则取决于
-宿主产品和套餐；这里不承诺固定节省百分比，也不把普通 Chat 描述成永久无限。
+消耗，让 Plus / Pro 等用户的 coding-agent 额度更耐用。
 
 > 面向 ChatGPT → 编码代理工作流的轻量策略层：判断是否需要交接、保留哪些上下文，以及应使用哪个模型与推理强度。
 
@@ -57,7 +55,7 @@ Chat / Architect → 结构化交接 → 执行前检查 → Work
 
 ## Evaluation / 回归证据
 
-当前仓库实际运行 **70 个自动测试**，并维护 **40 个声明的评估样例**，覆盖模型路由和交接生成边界。代表性回归类别包括：
+当前仓库实际运行 **72 个自动测试**，并维护 **40 个声明的评估样例**，覆盖模型路由和交接生成边界。代表性回归类别包括：
 
 - 复杂度不再自动把已确定的任务升级到 Sol；
 - 破坏性迁移和跨系统契约风险选择 Sol / strong；
@@ -97,6 +95,7 @@ HandoffGuard-Installer-v0.1.0.exe
 
 手动安装可以启用运行规则。请保留管理区块完整，以便按本地 Generate、Update 和 Removal 指引操作。
 对于当前测试的普通 Chat 目标 surface，推荐使用这条 Custom Instructions 路径；不要把安装 Skill 当作稳定等价方案。
+英文人工安装版本见 [CUSTOM-INSTRUCTIONS.en.md](CUSTOM-INSTRUCTIONS.en.md)；两种语言版本都由同一生成机制产出。
 
 ### Skill 适配层（高级）
 
@@ -126,7 +125,7 @@ Handoff Guard
    └─ 在 ChatGPT 中手动保存
 ```
 
-`runtime/custom-instructions.txt` 是 ChatGPT 运行适配层的 canonical template。Windows 安装器和自动生成的 `CUSTOM-INSTRUCTIONS.md` 都读取这一个文件，测试还会检查它是否覆盖 Core 的路由维度。因此安装器不会另外维护一套容易漂移的手写策略。
+`runtime/custom-instructions.txt` 是中文默认运行适配层的 canonical template，由 Windows 安装器和自动生成的 `CUSTOM-INSTRUCTIONS.md` 使用。英文人工安装文件由同一生成脚本根据语言等价源 `runtime/custom-instructions.en.txt` 生成；测试会检查两者的生成一致性和 Core 路由维度，因此不会额外维护一套安装器策略。
 
 ## Guided Install 管理区块
 
@@ -242,6 +241,7 @@ handoff-guard/
 ├── docs/                        # 平台边界与设计决策
 ├── skills/handoff-guard/        # 备用 Skill 适配层
 ├── CUSTOM-INSTRUCTIONS.md       # 自动生成的手动安装文件
+├── CUSTOM-INSTRUCTIONS.en.md    # 自动生成的英文手动安装文件
 ├── SECURITY.md
 └── LICENSE
 ```

@@ -2,8 +2,10 @@
 
 The Windows executable is a Guided Install adapter for Handoff Guard Core. It
 does not access ChatGPT Desktop settings and does not contain a separate
-routing policy. The executable and the manual-installation document consume
-`runtime/custom-instructions.txt`, the canonical ChatGPT runtime template.
+routing policy. The executable and the default manual-installation document
+consume `runtime/custom-instructions.txt`, the canonical Chinese ChatGPT
+runtime template. The generated English manual artifact uses the language-
+equivalent `runtime/custom-instructions.en.txt` through the same generator.
 
 ## User flow
 

@@ -50,7 +50,7 @@ class ManagedBlockTests(unittest.TestCase):
             install_or_update(broken)
 
     def test_modified_payload_fails_checksum(self):
-        broken = render_managed_block().replace("Use Handoff Guard", "Use Different Guard")
+        broken = render_managed_block().replace("使用 Handoff Guard", "使用 Different Guard")
         state = inspect_managed_block(broken)
         self.assertEqual(state.status, "corrupt")
         self.assertIn("checksum", state.reason)

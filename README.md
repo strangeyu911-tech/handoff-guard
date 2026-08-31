@@ -24,9 +24,7 @@ simple or low-risk work stays on Luna / general instead of escalating to Sol
 just because it has many files, lots of code, heavy reading, or a long prompt.
 The goal is less repeated exploration, fewer wrong model-tier choices, and less
 meaningless coding-agent token / quota consumption—so Plus / Pro users can make
-their coding-agent allowance last longer. Exact quota rules depend on the host
-product and plan; this does not promise a fixed percentage of savings or claim
-that ordinary Chat is permanently unlimited.
+their coding-agent allowance last longer.
 
 > A lightweight policy layer for ChatGPT → coding-agent workflows that decides whether to hand off, what context to preserve, and which model/reasoning tier to use.
 
@@ -61,7 +59,7 @@ integrity, a cross-system contract, or repeated failures.
 
 ## Evaluation and regression evidence
 
-The repository currently runs **70 automated tests** and maintains **40 declared evaluation cases** across routing and handoff-emission fixtures. Representative regression categories include:
+The repository currently runs **72 automated tests** and maintains **40 declared evaluation cases** across routing and handoff-emission fixtures. Representative regression categories include:
 
 - complexity does not automatically escalate a settled task to Sol;
 - destructive migration and cross-system contract risk select Sol / strong;
@@ -98,7 +96,7 @@ The installer is transparent about using ChatGPT Custom Instructions. That setti
 
 ### Manual installation
 
-You can also open [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md), copy its generated managed payload, and paste it alongside—not over—your existing Custom Instructions.
+You can also open [CUSTOM-INSTRUCTIONS.en.md](CUSTOM-INSTRUCTIONS.en.md) for the generated English manual-installation artifact, or use the default [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md) Chinese artifact. Copy the generated managed payload alongside—not over—your existing Custom Instructions.
 
 Manual installation activates the runtime rules. Keep the managed block intact so the local Generate, Update, and Removal instructions remain easy to follow.
 
@@ -130,7 +128,7 @@ Handoff Guard
    └─ manual save in ChatGPT
 ```
 
-`runtime/custom-instructions.txt` is the canonical ChatGPT runtime template. Both the Windows installer and the generated `CUSTOM-INSTRUCTIONS.md` consume that file, and tests enforce parity with the Core routing dimensions. This prevents the installer from acquiring a second, handwritten policy.
+`runtime/custom-instructions.txt` is the canonical Chinese default runtime template consumed by the Windows installer and generated `CUSTOM-INSTRUCTIONS.md`. The generated English manual artifact is built from the language-equivalent `runtime/custom-instructions.en.txt` by the same generator; tests enforce parity and routing dimensions for both. This keeps each runtime artifact tied to a canonical source without adding a second installer policy.
 
 ## Guided managed-block installation
 
@@ -249,6 +247,7 @@ handoff-guard/
 ├── docs/                        # platform constraints and design decisions
 ├── skills/handoff-guard/        # alternative Skill adapter
 ├── CUSTOM-INSTRUCTIONS.md       # generated manual-install artifact
+├── CUSTOM-INSTRUCTIONS.en.md    # generated English manual-install artifact
 ├── SECURITY.md
 └── LICENSE
 ```
