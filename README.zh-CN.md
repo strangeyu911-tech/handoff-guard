@@ -4,6 +4,8 @@
 
 ## 🚀 少烧 Codex / Work 额度，把 token 留给真正的执行！
 
+**别让 Sol 做 Luna 就能做的活。让 Chat 做决策，让 Coding Agent 做执行。**
+
 我做 Handoff Guard 的原因其实很简单：我不想把 Codex / Work 的
 coding-agent token / quota 浪费在本来可以先在普通聊天里完成的讨论、决策和
 重复探索上。普通 Chat 通常与 Work / Codex 的 coding-agent quota 分开计量，
@@ -13,8 +15,8 @@ coding-agent token / quota 浪费在本来可以先在普通聊天里完成的�
 
 ```text
 普通 Chat / Architect
-  → 讨论架构、拆解任务、选择模型、整理上下文
-  → Handoff Guard 形成边界清晰的执行契约
+  → 分析问题、讨论架构、拆解任务、选择模型、整理上下文
+  → 判断是否 handoff，并由 Handoff Guard 生成足够详细的执行契约
   → Work / Codex 只接手已经锁定决策的实现任务
 ```
 
@@ -94,10 +96,11 @@ HandoffGuard-Installer-v0.1.0.exe
 也可以打开 [CUSTOM-INSTRUCTIONS.md](CUSTOM-INSTRUCTIONS.md)，复制自动生成的运行配置，把它追加到现有 Custom Instructions 中，不能覆盖其他内容。
 
 手动安装可以启用运行规则。请保留管理区块完整，以便按本地 Generate、Update 和 Removal 指引操作。
+对于当前测试的普通 Chat 目标 surface，推荐使用这条 Custom Instructions 路径；不要把安装 Skill 当作稳定等价方案。
 
 ### Skill 适配层（高级）
 
-现有 Skill 适配层继续保留，供能够加载 Agent Skills 的宿主使用。可以把仓库目录复制到宿主的标准 skills 目录，也可以使用 `.codex-plugin/plugin.json` 中仅包含 Skill 的 Plugin 清单。Plugin 的 canonical Skill 位于 `skills/handoff-guard/SKILL.md`，根目录 `SKILL.md` 可用于直接安装。
+现有 Skill 适配层继续保留，供明确支持 Agent Skills 的宿主使用。可以把仓库目录复制到宿主的标准 skills 目录，也可以使用 `.codex-plugin/plugin.json` 中仅包含 Skill 的 Plugin 清单。Plugin 的 canonical Skill 位于 `skills/handoff-guard/SKILL.md`，根目录 `SKILL.md` 可用于直接安装；但不要假设安装后普通 Chat 就会稳定加载它。
 
 它是备用运行适配层，不是 Windows 主安装叙事。仓库不会把自己宣传为 OpenAI 官方集成，也不声称已经通过公开 Plugin Directory 的独立验证。
 
