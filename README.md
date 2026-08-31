@@ -2,9 +2,39 @@
 
 English | [简体中文](README.zh-CN.md)
 
-> A lightweight model-aware workflow layer that turns settled ChatGPT planning into safe, structured coding-agent execution.
+## 🚀 Spend less Codex / Work quota; save tokens for real execution
 
-Handoff Guard helps a Chat conversation decide when planning is ready to move into Work, preserves the implementation contract, recommends the cheapest model that is reliably sufficient, and checks the receiving agent before files change.
+I built Handoff Guard for a simple reason: I do not want to spend scarce
+Codex / Work coding-agent tokens and quota on discussions, decisions, and
+repeated exploration that could happen in ordinary Chat first. Ordinary Chat
+is typically metered separately from Work / Codex coding-agent quota, but exact
+limits depend on the host product and plan.
+
+Do not make a coding agent do all of the upfront thinking for you:
+
+```text
+Ordinary Chat / Architect
+  → discuss architecture, break down work, choose a model, organize context
+  → Handoff Guard forms a clear execution contract
+  → Work / Codex receives only implementation work with decisions locked
+```
+
+Handoff Guard recommends the cheapest model that is reliably sufficient, so
+simple or low-risk work stays on Luna / general instead of escalating to Sol
+just because it has many files, lots of code, heavy reading, or a long prompt.
+The goal is less repeated exploration, fewer wrong model-tier choices, and less
+meaningless coding-agent token / quota consumption—so Plus / Pro users can make
+their coding-agent allowance last longer. Exact quota rules depend on the host
+product and plan; this does not promise a fixed percentage of savings or claim
+that ordinary Chat is permanently unlimited.
+
+> A lightweight policy layer for ChatGPT → coding-agent workflows that decides whether to hand off, what context to preserve, and which model/reasoning tier to use.
+
+Ordinary Chat / Architect does the thinking; Handoff Guard turns settled plans
+into a structured handoff, recommends the right model, and runs the execution
+preflight; Work / Codex does the actual file changes and implementation. The
+product itself is the policy and contract layer; Custom Instructions, Skills,
+and the Guided Installer are runtime adapters around it.
 
 ```text
 Chat / Architect → structured handoff → execution preflight → Work
@@ -19,13 +49,37 @@ It is more than a static prompt. The repository contains a deterministic model s
 - **Recommends an appropriate model:** separates workload size from independent decision risk so large settled work does not automatically consume the strongest model.
 - **Checks before execution:** returns `PASS`, `BLOCK`, or `UNVERIFIED` before a receiving agent starts changing files.
 - **Keeps behavior testable:** validates handoff structure and runs routing policy against regression fixtures.
-- **Guides installation safely:** generates, validates, and copies a managed block for the user to save manually in ChatGPT on Windows.
+- **Offers a safe runtime path:** generates, validates, and copies a managed block for the user to save manually in ChatGPT on Windows.
+
+## Complexity ≠ Sol
+
+Complexity measures workload, not automatic escalation to Sol. Many files, lots
+of code, heavy reading, a long prompt, or batch implementation against a settled
+architecture are not risk signals by themselves. Sol / strong is for independent
+risk such as high novelty, ambiguity, blast radius, irreversibility, data
+integrity, a cross-system contract, or repeated failures.
+
+## Evaluation and regression evidence
+
+The repository currently runs **70 automated tests** and maintains **40 declared evaluation cases** across routing and handoff-emission fixtures. Representative regression categories include:
+
+- complexity does not automatically escalate a settled task to Sol;
+- destructive migration and cross-system contract risk select Sol / strong;
+- repeated failure escalation selects Sol / strong;
+- low-risk implementation and large read-only work remain Luna / general;
+- first-time architecture decisions remain high-risk even when the workload is moderate;
+- model and reasoning recommendation, quota fallback, `PASS`, `BLOCK`, and `UNVERIFIED` behavior remain explicit;
+- Work-environment and uncertain-surface cases do not recursively emit a handoff.
+
+See the [routing fixtures](evals/evals.json), [handoff-emission fixtures](evals/plugin-submission-tests.json), [routing tests](tests/test_select_model.py), and [policy tests](tests/test_handoff_emission_policy.py).
 
 ## Installation
 
-### Windows — Guided Install
+### Windows — Guided Install adapter
 
-The primary distribution artifact is:
+The Windows executable is a local Guided Install adapter, not the product's core. It helps place the runtime policy into ChatGPT Custom Instructions; the final paste and save remain manual.
+
+The current Windows distribution artifact is:
 
 ```text
 HandoffGuard-Installer-v0.1.0.exe
@@ -40,7 +94,7 @@ Status example: `Handoff Guard block copied. No ChatGPT account setting was chan
 
 If a release artifact is not published yet, see [Windows installer build and acceptance](docs/windows-installer.md) to build it from source.
 
-The installer is transparent about using ChatGPT Custom Instructions. That setting is the runtime adapter; Core policy, routing, schema, and validation remain separate product layers.
+The installer is transparent about using ChatGPT Custom Instructions. That setting is the current stable runtime adapter; Core policy, routing, schema, and validation remain separate product layers.
 
 ### Manual installation
 
@@ -70,8 +124,8 @@ Handoff Guard
 ├─ Runtime adapters
 │  ├─ Windows Installer / Custom Instructions
 │  └─ Skill adapter
-└─ Guided install lifecycle
-   ├─ generate and copy
+└─ Adapter support
+   ├─ guided generate / copy / open-web flow
    ├─ local update/removal transformation
    └─ manual save in ChatGPT
 ```
@@ -102,7 +156,7 @@ The installer does not send Custom Instructions to its own servers or third part
 
 ## Handoff and preflight contract
 
-Automatic handoff generation is allowed only in a reliably ordinary Chat / discussion conversation after a concrete development boundary. Any file access or edit, terminal command, code change, test run, Git operation, or other implementation signal makes the thread a Work / implementation environment. Handoff Guard does not append a new Work handoff there. If the surface is uncertain, it fails closed. An explicit user request for a handoff overrides the automatic-emission gate.
+Automatic handoff generation is allowed only in a reliably ordinary Chat / discussion conversation after a concrete development boundary. Any file access or edit, terminal command, code change, test run, Git operation, or other implementation signal makes the thread a Work / implementation environment. Handoff Guard does not append a new Work handoff there. If the Chat-versus-Work surface is uncertain, automatic emission fails closed. An explicit user request for a handoff overrides the automatic-emission gate.
 
 A valid handoff includes:
 
@@ -126,6 +180,28 @@ Preflight results have narrow meanings:
 
 Unknown is advisory, not blocking. Handoff Guard is not a runtime LLM gateway or automatic model router, does not control ChatGPT's model picker, and never switches providers or models automatically.
 
+## Validated platform constraints
+
+These are scoped engineering conclusions from the currently tested ChatGPT Plus ordinary-Chat surface and the currently tested ChatGPT Desktop version; they are not claims about every future version or plan:
+
+- Personal Skill injection could not be treated as a reliable runtime on the tested ChatGPT Plus ordinary-Chat target surface.
+- ChatGPT Desktop Custom Instructions could not be reliably read or written through the tested UI Automation (UIA) path.
+- No public Custom Instructions API is available for the current product path, so Handoff Guard does not rely on one.
+- Handoff Guard does not use private Web APIs, tokens, cookies, internal endpoints, coordinate automation, or OCR as a production workaround.
+
+Therefore, Custom Instructions is the current stable runtime. Skill and UIA remain documented as explored adapters and platform evidence, not as guaranteed installation paths. See [design decisions](docs/design-decisions.md), [Windows installer constraints](docs/windows-installer.md), and [SECURITY.md](SECURITY.md).
+
+## Design principles and lessons
+
+- **Explain model recommendations.** Show a short reason with every model and reasoning recommendation so users can audit the choice and catch silent misrouting. Keep that reason in Chat; the Work handoff stores only the selected model and reasoning effort plus execution context.
+- **Put routing information first.** Put `Model` and `Reasoning effort` on the first line or at the very top of a handoff, because the receiving user needs the selection before the rest of the context.
+- **Keep handoffs compact.** Aim for about 10,000 characters. This is a product constraint observed in actual ChatGPT Desktop use, not an official ChatGPT hard limit. If a handoff must be longer, attach a text file as a fallback; that adds manual work and handoff time.
+- **Prefer `UNVERIFIED` over unnecessary blocking.** If metadata cannot be confirmed but continuing is not a high-risk irreversible action, report `UNVERIFIED` and ask for manual verification. Use `BLOCK` only when verification is material to safe continuation.
+- **Sandbox absence is not host absence.** A sandbox that cannot resolve Python, `py`, `pip`, or another tool does not prove the user's host lacks it. Distinguish sandbox capability from host capability and, when the tool is necessary, try the real execution environment with normal approval handling.
+- **Detect execution environments semantically.** Local project access, file edits, terminal execution, code changes, tests, or Git operations make the thread a Work / execution environment regardless of its product mode label. Do not generate another Work handoff there; this prevents recursive context and token waste.
+
+For the rationale and evidence behind these rules, see [design decisions](docs/design-decisions.md).
+
 ## Routing policy
 
 The selector evaluates operation mode separately from independent decision risk. File count, repository count, code volume, reading volume, prompt length, or `task_complexity` alone never escalates work to Sol / strong.
@@ -133,6 +209,7 @@ The selector evaluates operation mode separately from independent decision risk.
 - **Luna / general, Medium:** research, read-only audits, inventories, documentation, tests, and implementation against settled architecture—even when the workload is large.
 - **Sol / strong, Medium:** high novelty, ambiguity, blast radius, or irreversibility; a new cross-system contract; data-integrity risk; destructive operations; unsettled architecture; an unbounded bugfix; or two evidenced prior failures.
 - **Budget / Low:** simple mechanical or cost-sensitive work when no independent risk rule requires more.
+- **Provider fallback:** when a declared Codex/GPT quota constraint makes the preferred provider unavailable, recommend the first compatible fallback (the default profile includes WorkBuddy); any provider or model switch remains manual.
 
 Model names and cost classes are configuration, not benchmark claims. The recommendation is for manual action by the user or host.
 
@@ -169,6 +246,7 @@ handoff-guard/
 ├── scripts/                     # selector, validator, generator, build
 ├── evals/                       # regression fixtures
 ├── tests/                       # Core and installer tests
+├── docs/                        # platform constraints and design decisions
 ├── skills/handoff-guard/        # alternative Skill adapter
 ├── CUSTOM-INSTRUCTIONS.md       # generated manual-install artifact
 ├── SECURITY.md
