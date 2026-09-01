@@ -10,7 +10,7 @@
 coding-agent token / quota 浪费在本来可以先在普通聊天里完成的讨论、决策和
 重复探索上。普通 Chat 通常与 Work / Codex 的 coding-agent quota 分开计量。
 
-不要让 coding agent 替你完成所有前期思考：
+不要让 coding agent 花token在不需要碰代码的思考上：
 
 ```text
 普通 Chat / Architect
