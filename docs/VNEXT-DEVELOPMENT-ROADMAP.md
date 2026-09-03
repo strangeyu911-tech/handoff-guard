@@ -13,7 +13,7 @@ update this document when that phase changes.
 
 | Phase | Status | Exit criteria | Evidence | Next |
 |---|---|---|---|---|
-| Phase 0 — Evidence repair & product cleanup | COMPLETE | Claims, canonical runtime, schema references, and test baseline are aligned and explicitly scoped | Generated artifacts checked; 72 discovered / 72 passed / 0 failed; 40 regression fixtures classified; README claims narrowed | Establish Phase 0 checkpoint, then implement Phase 1 |
+| Phase 0 — Evidence repair & product cleanup | COMPLETE | Claims, canonical runtime, schema references, and test baseline are aligned and explicitly scoped | Generated artifacts checked; 72 discovered / 72 passed / 0 failed; 40 regression fixtures classified; README claims narrowed | Checkpoint `afe3d99` established |
 | Phase 1 — Contract foundation | COMPLETE | Versioned contract has semantic validation, contradiction checks, and migration tests | `handoff_guard_core` typed contract/schema, 22 contract tests, Markdown compatibility; 94/94 bundled tests pass | Stop for Phase 2 review |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter maps the contract and returns normalized results in an exercised path | No adapter implementation in this roadmap change | Implement after contract foundation |
 | Phase 3 — External context reuse | NOT STARTED | Context providers are replaceable, bounded, and tested independently of execution | No provider integration yet | Add Repomix / evidence providers |
@@ -24,6 +24,41 @@ update this document when that phase changes.
 
 No phase is complete merely because code exists or unit tests pass. Status must
 include the evidence and the real user-path acceptance that supports it.
+
+## Current phase writeback
+
+### Phase 0 — Evidence repair & product cleanup
+
+- **Status:** COMPLETE.
+- **Evidence:** Both generated Custom Instructions artifacts pass
+  `scripts/generate_custom_instructions.py --check`; the bundled command
+  `.installer-venv\\Scripts\\python.exe -m unittest discover -s tests -v`
+  reports 72 discovered, 72 passed, and 0 failed before Phase 1 changes.
+- **Deviations:** The stale Chinese generated artifact was regenerated; no
+  product boundary or adapter was removed or redefined.
+- **Limitations:** Regression fixtures and local tests do not prove ChatGPT
+  runtime injection, boundary effectiveness, readiness safety, or semantic
+  completion.
+- **Next recommended step:** Completed by establishing `afe3d99`, then proceed
+  to the contract foundation.
+
+### Phase 1 — Contract foundation
+
+- **Status:** COMPLETE.
+- **Evidence:** `handoff_guard_core` provides the typed contract wrapper,
+  semantic validator, migration path, mutation checks, acceptance primitives,
+  Markdown compatibility adapter, and `schemas/execution-contract.v1.json`.
+  The final bundled run reports 94 discovered, 94 passed, and 0 failed; 22
+  contract tests include migration and round-trip fixtures.
+- **Deviations:** No executor, transport, provider, browser, repository packer,
+  readiness policy, or durable runtime was added. `retry_policy` is reserved
+  and remains `null` unless explicitly implemented in a later phase.
+- **Limitations:** The contract layer does not detect natural-language
+  boundary quality, execute acceptance, start an executor, or prove runtime
+  effectiveness; legacy Markdown imports preserve missing facts as explicit
+  unknown states.
+- **Next recommended step:** Stop at `9f7422b` and request Phase 2 architecture
+  review.
 
 ## 1. vNext North Star
 
@@ -77,8 +112,10 @@ readiness input. It is not the vNext moat and must not become a provider gateway
 
 - Branch: `main`.
 - HEAD at Phase 0 start: `e2c281aeb72626265b6419950785a3b082191399`.
-- Working tree: clean at preflight; Phase 0 changes are attributable to the
-  artifact repair and documentation cleanup described below.
+- Phase 0 checkpoint: `afe3d99` (`chore: repair phase 0 evidence baseline`).
+- Phase 1 checkpoint: `9f7422b` (`feat: add versioned execution contract foundation`).
+- Working tree: clean at preflight; all subsequent changes are attributable to
+  the Phase 0 artifact/documentation repair and Phase 1 contract foundation.
 - Existing roadmap / architecture documents: no prior vNext implementation
   roadmap; `docs/design-decisions.md` records current design decisions and
   `docs/windows-installer.md` records installer constraints. This file is the

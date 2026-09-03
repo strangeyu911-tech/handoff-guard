@@ -17,7 +17,7 @@ handoff 中明确当前 phase，并在 phase 状态变化时更新路线文档�
 
 | Phase | 状态 | Exit criteria | 当前证据 | 下一步 |
 |---|---|---|---|---|
-| Phase 0 — 证据修复与产品清理 | COMPLETE | 产品声明、canonical runtime、schema 引用和测试基线对齐，并明确范围 | 生成 artifact 已检查；72 discovered / 72 passed / 0 failed；40 个回归样例已分类；README 声明已收窄 | 建立 Phase 0 checkpoint，然后实现 Phase 1 |
+| Phase 0 — 证据修复与产品清理 | COMPLETE | 产品声明、canonical runtime、schema 引用和测试基线对齐，并明确范围 | 生成 artifact 已检查；72 discovered / 72 passed / 0 failed；40 个回归样例已分类；README 声明已收窄 | checkpoint `afe3d99` 已建立 |
 | Phase 1 — Contract foundation | COMPLETE | 版本化 contract 具备语义校验、矛盾检查和迁移测试 | `handoff_guard_core` typed contract/schema，22 个 contract 测试，Markdown compatibility；94/94 bundled tests 通过 | 停在 Phase 2 review |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter 完成 contract 映射，并在真实可行路径上返回 normalized result | 本轮未实现 adapter | contract foundation 后实现 |
 | Phase 3 — External context reuse | NOT STARTED | ContextProvider 可替换、有边界、并与 execution 独立测试 | 尚无 provider 集成 | 增加 Repomix / evidence provider |
@@ -28,6 +28,37 @@ handoff 中明确当前 phase，并在 phase 状态变化时更新路线文档�
 
 不能仅因为代码存在或 unit tests 通过就把 phase 标为完成。状态必须包含
 支持它的证据以及真实用户路径上的验收结果。
+
+## 当前 phase writeback
+
+### Phase 0 — 证据修复与产品清理
+
+- **status：** COMPLETE。
+- **evidence：** 两份生成的 Custom Instructions artifact 均通过
+  `scripts/generate_custom_instructions.py --check`；Phase 1 修改前，bundled
+  命令 `.installer-venv\\Scripts\\python.exe -m unittest discover -s tests -v`
+  报告 72 discovered、72 passed、0 failed。
+- **deviations：** 重生成了过期的中文 artifact；没有删除或重新定义产品边界
+  及 adapter。
+- **limitations：** regression fixture 和本地测试不能证明 ChatGPT runtime
+  injection、boundary effectiveness、readiness safety 或 semantic completion。
+- **下一步：** 已通过 `afe3d99` 建立 checkpoint，随后进入 contract foundation。
+
+### Phase 1 — Contract foundation
+
+- **status：** COMPLETE。
+- **evidence：** `handoff_guard_core` 提供 typed contract wrapper、semantic
+  validator、migration、mutation 检查、acceptance primitives、Markdown
+  compatibility adapter，以及 `schemas/execution-contract.v1.json`。最终
+  bundled run 报告 94 discovered、94 passed、0 failed；22 个 contract 测试
+  包含 migration 和 round-trip fixture。
+- **deviations：** 没有加入 executor、transport、provider、browser、repository
+  packer、readiness policy 或 durable runtime。`retry_policy` 只保留为 `null`
+  的预留字段，后续 phase 才可实现。
+- **limitations：** contract 层不检测自然语言 boundary quality、不执行
+  acceptance、不启动 executor，也不证明 runtime effectiveness；legacy Markdown
+  import 会把缺失事实保留为显式 unknown state。
+- **下一步：** 停在 `9f7422b`，请求 Phase 2 architecture review。
 
 ## 1. vNext North Star
 
@@ -80,7 +111,10 @@ readiness input，但不是 vNext moat，也不能演化成 provider gateway。
 
 - branch：`main`。
 - Phase 0 开始时 HEAD：`e2c281aeb72626265b6419950785a3b082191399`。
-- preflight 时工作树：clean；Phase 0 修改均可归因于下述 artifact 修复和文档清理。
+- Phase 0 checkpoint：`afe3d99`（`chore: repair phase 0 evidence baseline`）。
+- Phase 1 checkpoint：`9f7422b`（`feat: add versioned execution contract foundation`）。
+- preflight 时工作树：clean；后续所有修改均可归因于下述 Phase 0 artifact / 文档
+  修复和 Phase 1 contract foundation。
 - 现有 roadmap / architecture 文档：此前没有 vNext implementation
   roadmap；`docs/design-decisions.md` 记录当前设计决策，
   `docs/windows-installer.md` 记录 installer 约束。英文文件是唯一
