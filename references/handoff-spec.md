@@ -1,6 +1,6 @@
 # Handoff specification
 
-A handoff is a compact execution contract between agents. It must preserve decisions that should not be re-planned and provide enough routing/preflight data for the next agent.
+A Markdown handoff is a compact compatibility representation of an execution contract between agents. The versioned contract object is the semantic source of truth; Markdown preserves decisions that should not be re-planned and provides enough routing/preflight data for the next agent.
 
 ## Emission boundary
 
@@ -19,6 +19,12 @@ Required sections or labels:
 9. `Do-not / guardrails`
 
 The validator accepts Markdown headings or `Label: value` lines, case-insensitively. A section must contain non-whitespace content. Keep the handoff factual: distinguish completed work from intended work, and state uncertainty instead of inventing a checkpoint or model price.
+
+Phase 1 contract primitives live in `handoff_guard_core/contract.py`. Use
+`handoff_guard_core.markdown` to import legacy Markdown or export a human-readable
+document containing the canonical JSON contract. The Markdown compatibility layer
+fills unavailable legacy facts with explicit `unknown` / `UNVERIFIED` states; it
+does not infer executor, sandbox, approval, context, or acceptance evidence.
 
 The receiving agent should:
 

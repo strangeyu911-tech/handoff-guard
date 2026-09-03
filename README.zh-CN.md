@@ -35,7 +35,7 @@ Guided Installer 都只是围绕它工作的运行适配层。
 Chat / Architect → 结构化交接 → 执行前检查 → Work
 ```
 
-它不只是一段静态提示词。仓库中包含确定性的模型选择器、结构化交接格式、校验器、回归样例和执行边界规则。版本化语义执行契约计划在 Phase 1 实现；Custom Instructions 只是目前将现有能力接入 ChatGPT 的一种轻量运行适配层，不是产品的全部架构。
+它不只是一段静态提示词。仓库中包含确定性的模型选择器、版本化语义执行契约、校验器、回归样例和执行边界规则。Custom Instructions 只是目前将现有能力接入 ChatGPT 的一种轻量运行适配层，不是产品的全部架构。
 
 ## 能做什么
 
@@ -55,7 +55,7 @@ Chat / Architect → 结构化交接 → 执行前检查 → Work
 
 ## Evaluation / 回归证据
 
-当前仓库实际运行 **72 个自动测试**，并维护 **40 个声明的评估样例**，覆盖模型路由和交接生成边界。代表性回归类别包括：
+当前仓库实际运行 **94 个自动测试**，并维护 **40 个声明的 regression evaluation cases**，覆盖模型路由和交接生成边界。Phase 1 contract 层另有 22 个语义测试，包括迁移 fixture。代表性回归类别包括：
 
 - 复杂度不再自动把已确定的任务升级到 Sol；
 - 破坏性迁移和跨系统契约风险选择 Sol / strong；
@@ -110,7 +110,7 @@ Handoff Guard
 ├─ Core（核心能力）
 │  ├─ 交接边界策略
 │  ├─ 模型与推理强度推荐
-│  ├─ 交接格式
+│  ├─ 版本化执行契约
 │  └─ 执行前检查
 ├─ Validation（验证层）
 │  ├─ 确定性 selector 与 validator
@@ -226,13 +226,15 @@ python scripts/generate_custom_instructions.py --check
 python -m unittest discover -s tests -v
 ```
 
-自动测试覆盖 selector 回归、交接校验、自动生成边界、运行模板一致性、管理区块生命周期、本地文本变换、本地备份、确认、修复和 Guided Install 流程。它不会验证 ChatGPT 是否收到或保存了任何内容；账户变更有意留在安装器边界之外。
+自动测试覆盖 selector 回归、交接校验、自动生成边界、运行模板一致性、管理区块生命周期、本地文本变换、本地备份、确认、修复、Guided Install 流程和 Phase 1 contract 语义。它不会验证 ChatGPT 是否收到或保存了任何内容；账户变更有意留在安装器边界之外。
 
 ## 仓库结构
 
 ```text
 handoff-guard/
 ├── handoff_guard_installer/     # Windows 界面与安装生命周期
+├── handoff_guard_core/           # 与 executor 无关的契约原语
+├── schemas/                      # 版本化契约 schema
 ├── runtime/                     # canonical ChatGPT 运行模板
 ├── references/                  # 交接、路由和模型提供方契约
 ├── scripts/                     # selector、validator、生成与构建脚本

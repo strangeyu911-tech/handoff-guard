@@ -14,7 +14,7 @@ update this document when that phase changes.
 | Phase | Status | Exit criteria | Evidence | Next |
 |---|---|---|---|---|
 | Phase 0 — Evidence repair & product cleanup | COMPLETE | Claims, canonical runtime, schema references, and test baseline are aligned and explicitly scoped | Generated artifacts checked; 72 discovered / 72 passed / 0 failed; 40 regression fixtures classified; README claims narrowed | Establish Phase 0 checkpoint, then implement Phase 1 |
-| Phase 1 — Contract foundation | NOT STARTED | Versioned contract has semantic validation, contradiction checks, and migration tests | No vNext contract implementation yet | Define MVP contract after Phase 0 |
+| Phase 1 — Contract foundation | COMPLETE | Versioned contract has semantic validation, contradiction checks, and migration tests | `handoff_guard_core` typed contract/schema, 22 contract tests, Markdown compatibility; 94/94 bundled tests pass | Stop for Phase 2 review |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter maps the contract and returns normalized results in an exercised path | No adapter implementation in this roadmap change | Implement after contract foundation |
 | Phase 3 — External context reuse | NOT STARTED | Context providers are replaceable, bounded, and tested independently of execution | No provider integration yet | Add Repomix / evidence providers |
 | Phase 4 — Readiness / risk policy | NOT STARTED | Risk policy is explainable and benchmarked for false blocks and unsafe allows | Current selector is a legacy baseline only | Build policy inputs and benchmark |
@@ -140,9 +140,9 @@ quality, routing outcome quality, readiness safety, semantic acceptance, or
 completion correctness.
 
 The README's test-count claim is scoped to the reproducible bundled-suite
-command above. Current implementation claims now describe the structured
-handoff format; the versioned semantic execution contract remains planned for
-Phase 1.
+command above. Current implementation claims now include the implemented
+versioned semantic execution contract; readiness, boundary, and completion
+capabilities remain on the later roadmap phases.
 
 ## 3. Target architecture
 
@@ -621,16 +621,14 @@ and preserve compatibility until a later phase proves removal is safe.
 
 ## 11. First executable task after this roadmap
 
-The next implementation task is **Phase 1 — Contract Foundation**:
+The Phase 1 implementation is complete and the next action is **Phase 2 review**.
+The implementation provides the versioned semantic execution contract, typed
+wrapper, JSON Schema, semantic validator, migration from the explicitly supported
+0.1 shape, locked/mutable mutation checks, observable acceptance primitives, and
+Markdown compatibility import/export. The bundled suite reports 94 discovered,
+94 passed, and 0 failed tests.
 
-- add the versioned semantic execution contract and its canonical typed/schema
-  representation;
-- implement semantic validation, unknown-state handling, contradiction checks,
-  locked-versus-mutable behavior, and observable acceptance primitives;
-- implement version compatibility, migration fixtures, and round-trip behavior;
-- preserve Markdown import / export as a compatibility adapter;
-- do not start any executor, transport, provider, browser, or durable runtime.
-
-Acceptance gate: the Phase 1 contract can be created, semantically validated,
-migrated, rejected, and round-tripped with relevant tests passing. This roadmap
-continues to stop before Phase 2.
+Phase 2 remains intentionally unstarted. It requires a new review before any
+Codex SDK / App Server transport, executor startup, Repomix integration,
+readiness policy, boundary detector, acceptance completion gate, or durable
+runtime work begins.

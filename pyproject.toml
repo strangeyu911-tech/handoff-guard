@@ -16,4 +16,4 @@ keywords = ["coding-agents", "handoff", "model-routing", "preflight"]
 windows-installer = ["pyinstaller>=6.0,<7"]
 
 [tool.setuptools.packages.find]
-include = ["handoff_guard_installer*"]
+include = ["handoff_guard_installer*", "handoff_guard_core*"]

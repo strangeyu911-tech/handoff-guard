@@ -38,7 +38,7 @@ and the Guided Installer are runtime adapters around it.
 Chat / Architect → structured handoff → execution preflight → Work
 ```
 
-It is more than a static prompt. The repository contains a deterministic model selector, a structured handoff format, a validator, regression fixtures, and execution-boundary rules. A versioned semantic execution contract is planned for Phase 1; Custom Instructions are one lightweight runtime adapter used to activate the current behaviors in ChatGPT—not the product's entire architecture.
+It is more than a static prompt. The repository contains a deterministic model selector, a versioned semantic execution contract, a validator, regression fixtures, and execution-boundary rules. Custom Instructions are one lightweight runtime adapter used to activate the current behaviors in ChatGPT—not the product's entire architecture.
 
 ## What it does
 
@@ -59,7 +59,7 @@ integrity, a cross-system contract, or repeated failures.
 
 ## Evaluation and regression evidence
 
-The repository currently runs **72 automated tests** and maintains **40 declared evaluation cases** across routing and handoff-emission fixtures. Representative regression categories include:
+The repository currently runs **94 automated tests** and maintains **40 declared regression evaluation cases** across routing and handoff-emission fixtures. The Phase 1 contract layer adds 22 semantic tests, including migration fixtures. Representative regression categories include:
 
 - complexity does not automatically escalate a settled task to Sol;
 - destructive migration and cross-system contract risk select Sol / strong;
@@ -113,7 +113,7 @@ Handoff Guard
 ├─ Core
 │  ├─ handoff boundary policy
 │  ├─ model / reasoning recommendation
-│  ├─ handoff format
+│  ├─ versioned execution contract
 │  └─ execution preflight
 ├─ Validation
 │  ├─ deterministic selector and validator
@@ -232,13 +232,15 @@ Run the complete test suite:
 python -m unittest discover -s tests -v
 ```
 
-The automated suite covers selector regressions, handoff validation, emission boundaries, runtime-template parity, managed-block lifecycle, local transformation, local backup, confirmation, repair, and Guided Install behavior. It does not verify that ChatGPT has received or saved anything; final account changes are deliberately outside the installer.
+The automated suite covers selector regressions, handoff validation, emission boundaries, runtime-template parity, managed-block lifecycle, local transformation, local backup, confirmation, repair, Guided Install behavior, and Phase 1 contract semantics. It does not verify that ChatGPT has received or saved anything; final account changes are deliberately outside the installer.
 
 ## Repository structure
 
 ```text
 handoff-guard/
 ├── handoff_guard_installer/     # Windows UI and managed lifecycle
+├── handoff_guard_core/           # executor-independent contract primitives
+├── schemas/                      # versioned contract schema
 ├── runtime/                     # canonical ChatGPT runtime template
 ├── references/                  # handoff, routing, and provider contracts
 ├── scripts/                     # selector, validator, generator, build

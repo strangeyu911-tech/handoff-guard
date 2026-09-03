@@ -18,7 +18,7 @@ handoff 中明确当前 phase，并在 phase 状态变化时更新路线文档�
 | Phase | 状态 | Exit criteria | 当前证据 | 下一步 |
 |---|---|---|---|---|
 | Phase 0 — 证据修复与产品清理 | COMPLETE | 产品声明、canonical runtime、schema 引用和测试基线对齐，并明确范围 | 生成 artifact 已检查；72 discovered / 72 passed / 0 failed；40 个回归样例已分类；README 声明已收窄 | 建立 Phase 0 checkpoint，然后实现 Phase 1 |
-| Phase 1 — Contract foundation | NOT STARTED | 版本化 contract 具备语义校验、矛盾检查和迁移测试 | 尚无 vNext contract 实现 | Phase 0 后定义 MVP contract |
+| Phase 1 — Contract foundation | COMPLETE | 版本化 contract 具备语义校验、矛盾检查和迁移测试 | `handoff_guard_core` typed contract/schema，22 个 contract 测试，Markdown compatibility；94/94 bundled tests 通过 | 停在 Phase 2 review |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter 完成 contract 映射，并在真实可行路径上返回 normalized result | 本轮未实现 adapter | contract foundation 后实现 |
 | Phase 3 — External context reuse | NOT STARTED | ContextProvider 可替换、有边界、并与 execution 独立测试 | 尚无 provider 集成 | 增加 Repomix / evidence provider |
 | Phase 4 — Readiness / risk policy | NOT STARTED | 风险策略可解释，并以 false block / unsafe allow benchmark 验证 | 当前 selector 仅为旧基线 | 建立 policy 输入和 benchmark |
@@ -136,7 +136,8 @@ quality、routing outcome quality、readiness safety、semantic acceptance 或
 completion correctness。
 
 README 的测试数量声明已限定到上面的可复现 bundled-suite 命令。当前实现声明
-现在描述结构化 handoff format；版本化语义执行契约仍计划在 Phase 1 实现。
+现在描述已经实现的版本化语义执行契约；后续 readiness、boundary 和 completion
+能力仍按 Phase 2 之后的路线推进。
 
 ## 3. 目标架构
 
@@ -581,14 +582,11 @@ dependency；`WATCH` 表示在证据和 license review 通过前不依赖；`DO 
 
 ## 11. 本路线图之后的第一项可执行任务
 
-下一项实现任务是 **Phase 1 — Contract Foundation**：
+Phase 1 已完成，下一步是 **Phase 2 review**。本轮实现了版本化语义执行契约、
+typed wrapper、JSON Schema、语义校验器、明确支持的 0.1 迁移、locked / mutable
+mutation 检查、可观测 acceptance primitives，以及 Markdown compatibility
+import/export。bundled suite 报告 94 discovered、94 passed、0 failed。
 
-- 增加版本化语义执行契约及其 canonical typed/schema 表示；
-- 实现语义校验、unknown-state、矛盾检查、locked / mutable 行为和可观测
-  acceptance primitives；
-- 实现版本兼容、迁移样例和 round-trip 行为；
-- 保留 Markdown import / export 作为 compatibility adapter；
-- 不启动任何 executor、transport、provider、browser 或 durable runtime。
-
-验收 gate：Phase 1 contract 可以创建、语义校验、迁移、拒绝和 round-trip，相关
-测试通过。本路线图继续明确停在 Phase 2 之前。
+Phase 2 仍明确未开始。任何 Codex SDK / App Server transport、executor 启动、
+Repomix 集成、readiness policy、boundary detector、acceptance completion gate
+或 durable runtime，都必须等待新的 review。

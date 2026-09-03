@@ -1,0 +1,29 @@
+{
+  "success": [
+    {
+      "id": "legacy-0.1-basic",
+      "input": {
+        "contract_version": "0.1",
+        "handoff_id": "legacy-handoff-001",
+        "recommended_model": "Luna",
+        "reasoning_effort": "medium",
+        "preflight": "UNVERIFIED",
+        "current_state": "Phase 0 complete.",
+        "completed": ["Evidence baseline repaired."],
+        "checkpoint": "none",
+        "next_objective": "Implement Phase 1.",
+        "locked_decisions": ["Core owns contract semantics."],
+        "guardrails": ["Do not start an executor."]
+      },
+      "expected_version": "1.0",
+      "expected_unknown_source_context": true
+    }
+  ],
+  "failure": [
+    {
+      "id": "unsupported-0.2",
+      "input": {"contract_version": "0.2"},
+      "expected_error": "No migration is defined"
+    }
+  ]
+}
