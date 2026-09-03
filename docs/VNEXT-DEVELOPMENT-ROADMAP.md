@@ -1,8 +1,8 @@
 # Handoff Guard vNext Development Roadmap
 
 Status: canonical implementation source of truth  
-Last verified: 2026-09-03  
-Baseline: `main` at `a492c224e7f4c39f9efbc28aac4d88d37e15f31f`
+Last verified: 2026-09-04
+Baseline: `main` at `e2c281aeb72626265b6419950785a3b082191399`
 
 This document turns the prior competitor / prior-art architecture audit into a
 staged implementation and acceptance plan. It is a development roadmap, not a
@@ -13,7 +13,7 @@ update this document when that phase changes.
 
 | Phase | Status | Exit criteria | Evidence | Next |
 |---|---|---|---|---|
-| Phase 0 — Evidence repair & product cleanup | NOT STARTED | Claims, canonical runtime, schema references, and test baseline are aligned and explicitly scoped | Current baseline is documented below; 72 discovered / 43 passed / 29 failed | Repair drift or retract unsupported claims |
+| Phase 0 — Evidence repair & product cleanup | COMPLETE | Claims, canonical runtime, schema references, and test baseline are aligned and explicitly scoped | Generated artifacts checked; 72 discovered / 72 passed / 0 failed; 40 regression fixtures classified; README claims narrowed | Establish Phase 0 checkpoint, then implement Phase 1 |
 | Phase 1 — Contract foundation | NOT STARTED | Versioned contract has semantic validation, contradiction checks, and migration tests | No vNext contract implementation yet | Define MVP contract after Phase 0 |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter maps the contract and returns normalized results in an exercised path | No adapter implementation in this roadmap change | Implement after contract foundation |
 | Phase 3 — External context reuse | NOT STARTED | Context providers are replaceable, bounded, and tested independently of execution | No provider integration yet | Add Repomix / evidence providers |
@@ -76,8 +76,9 @@ readiness input. It is not the vNext moat and must not become a provider gateway
 ### Repository and verified state
 
 - Branch: `main`.
-- HEAD: `a492c224e7f4c39f9efbc28aac4d88d37e15f31f`.
-- Working tree: clean before this roadmap was created.
+- HEAD at Phase 0 start: `e2c281aeb72626265b6419950785a3b082191399`.
+- Working tree: clean at preflight; Phase 0 changes are attributable to the
+  artifact repair and documentation cleanup described below.
 - Existing roadmap / architecture documents: no prior vNext implementation
   roadmap; `docs/design-decisions.md` records current design decisions and
   `docs/windows-installer.md` records installer constraints. This file is the
@@ -121,26 +122,27 @@ validator can verify.
 
 ### Test and evidence baseline
 
-The bundled Python test run on 2026-09-03 discovered **72 tests: 43 passed and
-29 failed**. This is the baseline to repair or explicitly supersede; it is not
-evidence of vNext effectiveness.
+On 2026-09-04, the bundled interpreter at
+`.installer-venv\\Scripts\\python.exe` ran
+`-m unittest discover -s tests -v`: **72 tests discovered, 72 passed, 0
+failed**. `scripts/generate_custom_instructions.py --check` also passed.
 
-The observed failures are concentrated in `tests/test_custom_instructions.py`:
+Phase 0 repaired the stale `CUSTOM-INSTRUCTIONS.md` artifact. The canonical
+direction is explicit: `runtime/custom-instructions.txt` is the Chinese
+installer/default source, `runtime/custom-instructions.en.txt` is the
+language-equivalent English source, and the generator produces the matching
+manual artifacts. The installer reads only the Chinese source.
 
-- generated `CUSTOM-INSTRUCTIONS.md` does not equal the current Chinese
-  `runtime/custom-instructions.txt` payload;
-- installer canonical payload does not equal that runtime source;
-- expected routing dimensions and handoff terms are absent from the loaded
-  payload.
+The repository contains 40 declared regression fixtures: 25 routing cases, 7
+positive handoff-emission cases, and 8 negative handoff-emission cases. They
+prove deterministic compatibility behavior only; they do not prove boundary
+quality, routing outcome quality, readiness safety, semantic acceptance, or
+completion correctness.
 
-Routing fixtures, handoff-emission fixtures, handoff validator tests, plugin
-structure tests, and installer lifecycle tests passed in that run. The fixture
-suite proves deterministic rule regression only. It does not prove boundary
-quality, routing outcome quality, readiness safety, or completion correctness.
-
-The README claim that the repository “currently runs 72 automated tests” must
-be repaired, scoped, or withdrawn in Phase 0; it must not be used as a claim
-that all 72 currently pass.
+The README's test-count claim is scoped to the reproducible bundled-suite
+command above. Current implementation claims now describe the structured
+handoff format; the versioned semantic execution contract remains planned for
+Phase 1.
 
 ## 3. Target architecture
 
@@ -619,17 +621,16 @@ and preserve compatibility until a later phase proves removal is safe.
 
 ## 11. First executable task after this roadmap
 
-The first implementation task is **Phase 0.1 — repair the evidence baseline**:
+The next implementation task is **Phase 1 — Contract Foundation**:
 
-- inspect the exact source / generated Custom Instructions relationship;
-- choose and document the canonical generation direction without deleting
-  existing artifacts;
-- align or explicitly scope the runtime, references, tests, and README claims;
-- rerun the complete bundled suite and record the new discovered / passed /
-  failed counts;
-- stop and report any contradiction that would require a product decision.
+- add the versioned semantic execution contract and its canonical typed/schema
+  representation;
+- implement semantic validation, unknown-state handling, contradiction checks,
+  locked-versus-mutable behavior, and observable acceptance primitives;
+- implement version compatibility, migration fixtures, and round-trip behavior;
+- preserve Markdown import / export as a compatibility adapter;
+- do not start any executor, transport, provider, browser, or durable runtime.
 
-Acceptance gate: the baseline is truthful and reproducible, parity claims are
-true where stated, and no vNext adapter or large runtime refactor has started.
-
-This roadmap checkpoint intentionally stops before Phase 0 execution.
+Acceptance gate: the Phase 1 contract can be created, semantically validated,
+migrated, rejected, and round-tripped with relevant tests passing. This roadmap
+continues to stop before Phase 2.

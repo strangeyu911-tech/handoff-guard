@@ -38,7 +38,7 @@ and the Guided Installer are runtime adapters around it.
 Chat / Architect → structured handoff → execution preflight → Work
 ```
 
-It is more than a static prompt. The repository contains a deterministic model selector, a versioned handoff contract, a validator, regression fixtures, and execution-boundary rules. Custom Instructions are one lightweight runtime adapter used to activate those behaviors in ChatGPT—not the product's entire architecture.
+It is more than a static prompt. The repository contains a deterministic model selector, a structured handoff format, a validator, regression fixtures, and execution-boundary rules. A versioned semantic execution contract is planned for Phase 1; Custom Instructions are one lightweight runtime adapter used to activate the current behaviors in ChatGPT—not the product's entire architecture.
 
 ## What it does
 
@@ -113,7 +113,7 @@ Handoff Guard
 ├─ Core
 │  ├─ handoff boundary policy
 │  ├─ model / reasoning recommendation
-│  ├─ handoff schema
+│  ├─ handoff format
 │  └─ execution preflight
 ├─ Validation
 │  ├─ deterministic selector and validator

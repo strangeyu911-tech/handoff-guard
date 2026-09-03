@@ -3,7 +3,7 @@
 状态：中文审阅副本  
 英文 canonical：[`docs/VNEXT-DEVELOPMENT-ROADMAP.md`](./VNEXT-DEVELOPMENT-ROADMAP.md)  
 最后核验：2026-09-04  
-基线：`main`，HEAD `59b338908fd1d69b3e8a4dd1cad706e89322bc48`
+基线：`main`，Phase 0 开始时 HEAD `e2c281aeb72626265b6419950785a3b082191399`
 
 本文是英文 canonical roadmap 的中文审阅版，供产品、架构和阶段决策审核。
 后续实施状态仍应回写英文 canonical 文件；如两份文件出现冲突，以英文
@@ -17,7 +17,7 @@ handoff 中明确当前 phase，并在 phase 状态变化时更新路线文档�
 
 | Phase | 状态 | Exit criteria | 当前证据 | 下一步 |
 |---|---|---|---|---|
-| Phase 0 — 证据修复与产品清理 | NOT STARTED | 产品声明、canonical runtime、schema 引用和测试基线对齐，并明确范围 | 当前基线已记录；72 discovered / 43 passed / 29 failed | 修复 drift 或撤回未经支持的声明 |
+| Phase 0 — 证据修复与产品清理 | COMPLETE | 产品声明、canonical runtime、schema 引用和测试基线对齐，并明确范围 | 生成 artifact 已检查；72 discovered / 72 passed / 0 failed；40 个回归样例已分类；README 声明已收窄 | 建立 Phase 0 checkpoint，然后实现 Phase 1 |
 | Phase 1 — Contract foundation | NOT STARTED | 版本化 contract 具备语义校验、矛盾检查和迁移测试 | 尚无 vNext contract 实现 | Phase 0 后定义 MVP contract |
 | Phase 2 — Native Codex path | NOT STARTED | Codex adapter 完成 contract 映射，并在真实可行路径上返回 normalized result | 本轮未实现 adapter | contract foundation 后实现 |
 | Phase 3 — External context reuse | NOT STARTED | ContextProvider 可替换、有边界、并与 execution 独立测试 | 尚无 provider 集成 | 增加 Repomix / evidence provider |
@@ -79,9 +79,8 @@ readiness input，但不是 vNext moat，也不能演化成 provider gateway。
 ### 仓库与已核验状态
 
 - branch：`main`。
-- 上一轮基线 HEAD：`a492c224e7f4c39f9efbc28aac4d88d37e15f31f`。
-- 本中文副本创建前工作树：clean。
-- 当前路线 checkpoint HEAD：`59b338908fd1d69b3e8a4dd1cad706e89322bc48`。
+- Phase 0 开始时 HEAD：`e2c281aeb72626265b6419950785a3b082191399`。
+- preflight 时工作树：clean；Phase 0 修改均可归因于下述 artifact 修复和文档清理。
 - 现有 roadmap / architecture 文档：此前没有 vNext implementation
   roadmap；`docs/design-decisions.md` 记录当前设计决策，
   `docs/windows-installer.md` 记录 installer 约束。英文文件是唯一
@@ -121,24 +120,23 @@ Boundary detection 目前主要存在于 prompt / Custom Instructions runtime
 
 ### 测试与证据基线
 
-2026-09-03 使用仓库已有 bundled Python environment 实际执行测试：
-**72 个测试被发现，43 个通过，29 个失败**。这是需要修复或明确替代的
-基线，不是 vNext effectiveness 证据。
+2026-09-04 使用 bundled interpreter
+`.installer-venv\\Scripts\\python.exe` 执行
+`-m unittest discover -s tests -v`：**72 个测试被发现，72 个通过，0 个失败**。
+`scripts/generate_custom_instructions.py --check` 也已通过。
 
-失败集中在 `tests/test_custom_instructions.py`：
+Phase 0 修复了过期的 `CUSTOM-INSTRUCTIONS.md` artifact。canonical 方向已明确：
+`runtime/custom-instructions.txt` 是中文安装器 / 默认路径的 source，
+`runtime/custom-instructions.en.txt` 是语言等价的英文 source，生成器分别产出
+匹配的手动 artifact；installer 只读取中文 source。
 
-- 生成的 `CUSTOM-INSTRUCTIONS.md` 不等于当前中文
-  `runtime/custom-instructions.txt` payload；
-- installer canonical payload 不等于 runtime source；
-- loaded payload 中缺失预期的 routing dimensions 与 handoff terms。
+仓库包含 40 个声明的回归样例：25 个 routing、7 个正向 handoff emission、8 个
+负向 handoff emission。它们只能证明确定性的兼容性行为，不能证明 boundary
+quality、routing outcome quality、readiness safety、semantic acceptance 或
+completion correctness。
 
-Routing fixtures、handoff-emission fixtures、handoff validator tests、plugin
-structure tests 和 installer lifecycle tests 在该次运行中通过。fixture suite
-只能证明确定性规则回归，不能证明 boundary quality、routing outcome quality、
-readiness safety 或 completion correctness。
-
-README 中“当前运行 72 个 automated tests”的表述必须在 Phase 0 修复、限定
-范围或撤回；不能用它声称当前 72 个测试全部通过。
+README 的测试数量声明已限定到上面的可复现 bundled-suite 命令。当前实现声明
+现在描述结构化 handoff format；版本化语义执行契约仍计划在 Phase 1 实现。
 
 ## 3. 目标架构
 
@@ -583,15 +581,14 @@ dependency；`WATCH` 表示在证据和 license review 通过前不依赖；`DO 
 
 ## 11. 本路线图之后的第一项可执行任务
 
-第一项实现任务是 **Phase 0.1 — repair the evidence baseline**：
+下一项实现任务是 **Phase 1 — Contract Foundation**：
 
-- 检查 Custom Instructions source / generated artifact 的确切关系；
-- 选择并记录 canonical generation direction，不删除现有 artifact；
-- 对齐或明确限定 runtime、references、tests 和 README claims；
-- 重新执行 bundled suite，并记录新的 discovered / passed / failed counts；
-- 如果发现需要产品决策的 contradiction，停止并报告，不擅自扩展范围。
+- 增加版本化语义执行契约及其 canonical typed/schema 表示；
+- 实现语义校验、unknown-state、矛盾检查、locked / mutable 行为和可观测
+  acceptance primitives；
+- 实现版本兼容、迁移样例和 round-trip 行为；
+- 保留 Markdown import / export 作为 compatibility adapter；
+- 不启动任何 executor、transport、provider、browser 或 durable runtime。
 
-验收 gate：baseline truthful 且可复现；parity claim 在声明处为真；没有开始
-任何 vNext adapter 或大规模 runtime refactor。
-
-本中文审阅版与英文 canonical roadmap 都明确停在 Phase 0 执行之前。
+验收 gate：Phase 1 contract 可以创建、语义校验、迁移、拒绝和 round-trip，相关
+测试通过。本路线图继续明确停在 Phase 2 之前。

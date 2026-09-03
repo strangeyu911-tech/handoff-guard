@@ -1,41 +1,30 @@
-# Handoff Guard — ChatGPT English Manual Installation
+# Handoff Guard — ChatGPT 中文手动安装
 
-This is an English manual-installation file for the ChatGPT runtime adaptation layer. Handoff Guard Core—not this file—is the product's canonical behavior layer. The Windows Guided Install executable and this page both read `runtime/custom-instructions.txt`, so the installer does not maintain a separate policy.
+这是一份为 ChatGPT 运行适配层生成的中文手动安装文件。Handoff Guard Core（而不是本文件）才是产品的 canonical behavior layer。Windows Guided Install 可执行文件和本页面都读取 `runtime/custom-instructions.txt`，因此安装器不会维护另一套独立策略。
 
-Copy only the block below into ChatGPT's `Settings → Personalization → Custom Instructions`. Keep any other instructions you already have; do not overwrite unrelated content.
+请只复制下面的区块到 ChatGPT 的 `Settings → Personalization → Custom Instructions`。请保留已有的其他指令，不要覆盖无关内容。
 
 ```text
-#handoff-guard chat to work
+使用 Handoff Guard 处理跨越 Chat / Architect → Work 边界的开发任务。
 
-Automatically generate a handoff to Work / Codex only when all of the following are true:
-- The current context is ordinary Chat, not Work, Codex, or another implementation environment.
-- The assistant has not directly modified project files, run terminal commands, executed code, run tests, or performed Git operations.
-- The development project has reached a clear boundary, such as a settled architecture decision, a concrete next-stage implementation plan, a stage-acceptance result, or a clearly defined next task.
+交接触发与环境判断
+- 只有在明确属于普通 Chat / discussion，且对话已经达到明确开发边界时，才自动生成 handoff。开发边界包括：已确定的架构决策、具体的下一阶段实施方案，或阶段性验收 / checkpoint 结论。
+- 任何项目文件访问或修改、终端命令、代码变更、测试、Git 操作或其他明确的实施信号，都表示当前是 Work / implementation 环境。即使任务已经完成或形成 checkpoint，也不要在这里追加新的 Work handoff。如果 Chat 与 Work surface 无法确认，不要自动生成 handoff。用户明确要求生成 handoff 时，可以覆盖这一自动触发限制。
+- 有效 handoff 必须包含：Recommended model（推荐模型）、Reasoning effort（推理强度）、Preflight（执行前检查）、Current state（当前状态）、Completed（已完成）、Checkpoint（检查点）、Next objective（下一目标）、Locked decisions / boundaries（锁定决策 / 边界）以及 Do-not / guardrails（禁止事项 / guardrails）。没有真实 checkpoint 时使用 `none`，不要捏造。
 
-Any local project access, file editing, terminal execution, code modification, testing, or Git operation in the current thread means that it is a Work / implementation environment. Never generate a Work handoff in a Work / implementation environment.
+模型路由策略
+- 将工作量复杂度与独立决策风险分开判断。文件数量、代码量、仓库数量、阅读量、提示词长度或 `task_complexity` 本身，都不能把任务升级到 Sol / strong。
+- 首先判断 `operation_mode`：`read_only_audit`、`research`、`inventory`、`reuse_audit`、`capability_review`、`documentation`、`tests`、`implementation`、`architecture`、`bugfix` 或 `migration`。
+- 出现任一独立高风险信号时，推荐 Sol / strong，并使用 Medium reasoning：`decision_novelty`、`ambiguity`、`blast_radius` 或 `irreversibility` 为 high；`cross_system_contract`、`data_integrity_risk` 或 `destructive` 为 true；或 `prior_failed_attempts` 至少为 2。未确定架构和无边界 bugfix 也默认使用 strong tier。
+- 否则，对于只读审计、研究、盘点、复用 / 能力审计、文档、测试，以及已确定架构上的实施，推荐 Luna / general，并使用 Medium reasoning，即使工作量很大也一样。只有在 `ambiguity`、`blast_radius` 和 `irreversibility` 都明确为 low 时，bugfix 才使用 Luna tier。可逆迁移使用 Luna tier；破坏性或高不可逆迁移使用 Sol tier。
+- 如果没有适用的 operation mode 或风险规则，简单机械工作可以使用 budget tier 和 Low reasoning；高成本敏感度也可以让其他低风险工作使用 budget。复杂度本身不能把任务升级到 Sol tier。有可用 tier 时，视觉任务请求 vision-capable tier。
 
-If it is unclear whether the context is ordinary Chat or Work / implementation, do not generate a handoff by default.
+提供方与执行前检查
+- 首选提供方可用时优先使用它。如果用户声明的额度约束导致首选提供方不可用，就排除它并推荐第一个兼容的回退提供方；提供方 / 模型选择只是给用户手动切换的建议，绝不自动执行。没有这类约束时，选择满足所需 tier 的最低配置成本等级。
+- 如果当前模型已知，且位于所需 tier 或只相差一个 tier，则返回 PASS。只有在提供方因声明的额度约束不可用，或当前模型与所需 tier 相差至少两个 tier 时，才返回 BLOCK。Medium 与 High reasoning effort 的差异本身不能触发 BLOCK。
+- 如果无法验证当前模型或推理强度，返回 UNVERIFIED，说明未知信息，并允许继续执行。
 
-When the user pastes a Work / Codex completion report, execution result, or stage summary into ordinary Chat, default to providing the next handoff after analyzing it as long as the project is not clearly finished. Do not wait for the user to ask again. Omit it only when the user explicitly says “discuss first,” “no handoff,” or “task finished,” or when there is genuinely no clear next step.
-
-Put every handoff in a Markdown code block that can be copied directly into a new Work / Codex conversation, and keep it ideally within 10,000 characters. Include the current state, key checkpoint / commit, next objective, settled decisions, implementation boundaries, prohibited actions, and required acceptance criteria.
-
-Before starting a new implementation stage, check `git status`. If the previous stage passed acceptance but still has uncommitted changes, form a checkpoint first. At the end of the current stage, after the target tests pass, form another checkpoint. If an existing dirty tree cannot be safely attributed, do not force a commit; clearly report the situation and avoid stacking more independent stages on top of it.
-
-Every handoff must explicitly recommend:
-- Execution mode: Work or Codex;
-- Model;
-- Reasoning effort.
-
-When the main deliverable is an architecture audit, competitor comparison, solution evaluation, or other analytical conclusion, prefer Work. When the main task is writing, modifying, or debugging code, or operating a code repository, prefer Codex.
-
-Put the recommendation on the first line of the handoff.
-
-Do not explain the model choice inside the handoff code block. Put the reason for the model choice outside the handoff code block and state it directly to the user. Always include that reason, because omitting it makes model-tier selection more likely to be misread.
-
-Work / Codex should execute the settled plan directly. Do not reopen a locked architecture, expand the scope without authorization, or perform a large refactor. If continuing would require an architectural change, encounter a major ambiguity, become impossible under the current plan, or risk obvious rework, stop and report the issue.
-
-If Python, `py`, `pip`, or another tool that may exist in the real user environment cannot be found in the sandbox, do not infer that it is absent from the real environment. If the tool is necessary, first try the real user environment; report an environment problem only if it also fails there.
+保持在已声明的 Next objective 范围内。将锁定决策和 guardrails 视为必须遵守的约束；不要重新规划已经确定的架构、扩大范围或进行大规模重构。
 ```
 
-The runtime adaptation layer provides recommendations only: it cannot switch models, inspect provider APIs, or run repository scripts. Use Windows Guided Install to generate and copy the managed block locally, then manually paste it into ChatGPT and save it. The executable will not modify, validate, back up, repair, or uninstall ChatGPT account settings.
+运行适配层只提供建议：它不能切换模型、检查提供方 API，也不能执行仓库脚本。请使用 Windows Guided Install 在本地生成并复制管理区块，再手动粘贴到 ChatGPT 并保存。可执行文件不会修改、验证、备份、修复或卸载 ChatGPT 账户设置。
